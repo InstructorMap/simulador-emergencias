@@ -114,9 +114,13 @@ const App = {
 
     finishSimulation: function() {
         document.getElementById('simulatorPage').classList.add('hidden');
-        alert(`¡Simulación terminada! Puntuación final: ${this.state.score} / ${ScenariosDB.length * 10}`);
         
-        // Acá luego llamaremos a: CertificateGenerator.generate(...)
+        // Pedimos el nombre para el diploma
+        const studentName = prompt("¡Simulación terminada! Ingresá tu nombre completo para emitir el certificado:") || "Operador Clínico";
+        
+        // Generamos el PDF dinámico
+        CertificateGenerator.generate(studentName, this.state.score);
+        
         this.goBackToLanding();
     },
 
