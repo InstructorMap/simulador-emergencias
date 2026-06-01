@@ -3,966 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="Evaluador de Criterio Paramédico - Simulador clínico interactivo profesional">
-    <meta name="author" content="Pulse Triage - Asari Medical">
-    <meta name="copyright" content="Asari Medical">
-    <title>Pulse Triage | Evaluador de Criterio Paramédico by Asari</title>
+    <meta name="description" content="Emergency Academy - Evaluador Clínico SaaS">
+    <title>Emergency Academy | by ASARI</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&display=swap');
-        * { font-family: 'Inter', sans-serif; }
-        
-        @keyframes pulse-red {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
-        }
-        
-        .timer-warning { animation: pulse-red 1s infinite; }
-        .slide-in { animation: slideIn 0.4s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-        
-        .toast-notification {
-            position: fixed; top: 100px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; padding: 12px 24px; border-radius: 12px; font-weight: 600;
-            animation: fadeInUp 0.3s ease-out;
-        }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .course-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .course-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-        
-        .campus-sidebar {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        }
-        
-        .admin-table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        
-        .admin-table th, .admin-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .admin-table th {
-            background-color: #f9fafb;
-            font-weight: 600;
-        }
-        
-        .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-        }
-        
-        /* Estilo profesional para el generador de PDF */
-        .certificate-preview {
-            background: linear-gradient(135deg, #fff8f0 0%, #fff 100%);
-            border: 2px solid #ef4444;
-        }
-    </style>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-red-900 to-gray-900">
-    
-    <!-- ============================================ -->
-    <!-- LANDING PAGE -->
-    <!-- ============================================ -->
-    <div id="landingPage" class="min-h-screen">
-        <div class="relative overflow-hidden">
-            <div class="absolute inset-0 bg-black/50 z-0"></div>
-            <div class="container mx-auto px-4 py-16 md:py-24 relative z-10">
-                <div class="text-center text-white">
-                    <span class="inline-block bg-red-600 px-4 py-2 rounded-full text-sm font-semibold mb-6">🚑 Evaluación Clínica Avanzada | By Asari Medical</span>
-                    <h1 class="text-4xl md:text-7xl font-bold mb-6">¿Qué tan preparado estás para una <span class="text-red-500">emergencia real?</span></h1>
-                    <p class="text-lg md:text-2xl mb-8 text-gray-200">10 minutos. 10 escenarios críticos. Descubrí tu verdadero nivel clínico.</p>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                        <button onclick="startSimulation()" class="bg-red-600 hover:bg-red-700 text-white text-lg px-8 py-4 rounded-xl font-semibold transition transform hover:scale-105 shadow-lg">Comenzar Evaluación Gratis <i class="fas fa-arrow-right ml-2"></i></button>
-                        <button onclick="scrollToTestimonials()" class="border-2 border-white text-white hover:bg-white/10 text-lg px-8 py-4 rounded-xl font-semibold transition">Ver Demo <i class="fas fa-play ml-2"></i></button>
-                    </div>
-                    <div class="flex flex-wrap justify-center gap-6 text-sm">
-                        <div class="flex items-center gap-2"><i class="fas fa-users text-red-500"></i><span>3,500+ paramédicos evaluados</span></div>
-                        <div class="flex items-center gap-2"><i class="fas fa-star text-yellow-500"></i><span>4.9/5 rating clínico</span></div>
-                        <div class="flex items-center gap-2"><i class="fas fa-heartbeat text-red-500"></i><span>Certificación AHA compatible</span></div>
-                    </div>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" id="app-body">
+
+    <div id="landingPage" class="min-h-screen relative flex items-center justify-center">
+        <div class="container mx-auto px-4 py-16 relative z-10 text-center text-white">
+            <span id="tenant-badge" class="inline-block bg-blue-600 px-4 py-2 rounded-full text-sm font-semibold mb-6 shadow-lg">
+                🚑 Operaciones Especiales | B.A.R.I.E.C.
+            </span>
+            <h1 class="text-5xl md:text-7xl font-bold mb-6 tracking-tight" id="tenant-title">
+                Evaluación Clínica <span class="text-blue-500">Avanzada</span>
+            </h1>
+            <p class="text-lg md:text-2xl mb-10 text-gray-300 max-w-2xl mx-auto">
+                Descubrí tu verdadero nivel clínico bajo presión real. 10 escenarios críticos en tiempo récord.
+            </p>
+            <button onclick="App.startSimulation()" class="bg-blue-600 hover:bg-blue-700 text-white text-xl px-10 py-5 rounded-2xl font-bold transition transform hover:scale-105 shadow-2xl">
+                Comenzar Evaluación Gratis <i class="fas fa-bolt ml-2"></i>
+            </button>
+            <p class="mt-8 text-sm text-slate-400">Desarrollado por ASARI</p>
+        </div>
+    </div>
+
+    <div id="simulatorPage" class="min-h-screen hidden container mx-auto px-4 py-12">
+        <div class="max-w-4xl mx-auto mb-8 flex justify-between items-center">
+            <button onclick="App.goBackToLanding()" class="text-slate-400 hover:text-white transition">
+                <i class="fas fa-arrow-left text-2xl"></i>
+            </button>
+            <div class="text-white font-semibold bg-blue-600 px-6 py-2 rounded-full shadow">
+                Escenario <span id="currentScenarioIndex">1</span> / <span id="totalScenarios">10</span>
+            </div>
+            <div class="w-8"></div> </div>
+        
+        <div id="scenarioContainer" class="max-w-4xl mx-auto"></div>
+    </div>
+
+    <div id="saasAdminPanel" class="min-h-screen hidden bg-slate-100 py-12">
+        <div class="container mx-auto px-4 max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden p-8 border border-slate-200">
+            <div class="flex justify-between items-center mb-8 border-b pb-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800">Panel de Configuración SaaS</h1>
+                    <p class="text-slate-500">Gestión de identidad visual y certificaciones (Marca Blanca)</p>
                 </div>
+                <button onclick="App.hideSaaSPanel()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-semibold transition">
+                    Volver a Inicio
+                </button>
             </div>
-        </div>
-        
-        <div class="container mx-auto px-4 py-20">
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 text-white"><i class="fas fa-brain text-5xl text-red-500 mb-4"></i><h3 class="text-xl font-bold mb-2">Simulador Adaptativo</h3><p class="text-gray-300">30 segundos por escenario. Presión real.</p></div>
-                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 text-white"><i class="fas fa-trophy text-5xl text-red-500 mb-4"></i><h3 class="text-xl font-bold mb-2">Feedback Personalizado</h3><p class="text-gray-300">Análisis de sesgos clínicos.</p></div>
-                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 text-white"><i class="fas fa-shield-alt text-5xl text-red-500 mb-4"></i><h3 class="text-xl font-bold mb-2">Campus Virtual</h3><p class="text-gray-300">Cursos integrados con certificación.</p></div>
-            </div>
-        </div>
-        
-        <div id="testimonials" class="container mx-auto px-4 py-20">
-            <h2 class="text-3xl md:text-4xl font-bold text-center text-white mb-12">Lo que dicen los profesionales</h2>
+            
             <div class="grid md:grid-cols-2 gap-8">
-                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8"><p class="text-white italic mb-4">"El simulador me mostró mis puntos ciegos. Mejoré mi tiempo en 40%."</p><div class="flex items-center gap-3"><div class="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">MT</div><div><p class="text-white font-semibold">María Torres</p><p class="text-gray-300 text-sm">Paramédico Senior, SAMU</p></div></div></div>
-                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8"><p class="text-white italic mb-4">"La presión del temporizador refleja exactamente una emergencia real."</p><div class="flex items-center gap-3"><div class="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">CR</div><div><p class="text-white font-semibold">Carlos Rodríguez</p><p class="text-gray-300 text-sm">Instructor ATLS</p></div></div></div>
-            </div>
-        </div>
-        
-        <div class="container mx-auto px-4 py-20 text-center">
-            <button onclick="startSimulation()" class="bg-red-600 hover:bg-red-700 text-white text-xl px-12 py-6 rounded-xl font-bold transition transform hover:scale-105 shadow-2xl">Descubrí tu nivel clínico ahora <i class="fas fa-bolt ml-2"></i></button>
-        </div>
-        
-        <a href="https://wa.me/54221362475?text=Hola!%20Vengo%20del%20simulador%20Pulse%20Triage" target="_blank" class="fixed bottom-6 right-6 bg-green-500 p-4 rounded-full shadow-lg hover:bg-green-600 transition z-50 hover:scale-110"><i class="fab fa-whatsapp text-white text-2xl"></i></a>
-    </div>
-    
-    <!-- ============================================ -->
-    <!-- SIMULADOR (30 segundos + opciones aleatorias) -->
-    <!-- ============================================ -->
-    <div id="simulatorPage" class="min-h-screen hidden">
-        <div class="container mx-auto px-4 py-8">
-            <div class="mb-8">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex items-center gap-4">
-                        <button onclick="goBackToLanding()" class="text-white hover:text-red-400"><i class="fas fa-arrow-left text-2xl"></i></button>
-                        <span class="text-white font-semibold bg-red-600 px-4 py-2 rounded-full">Escenario <span id="currentScenarioIndex">1</span> / <span id="totalScenarios">10</span></span>
-                    </div>
-                    <div class="flex gap-3">
-                        <button onclick="toggleSound()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"><i id="soundIcon" class="fas fa-volume-up"></i></button>
-                        <button onclick="toggleTimer()" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg"><i class="fas fa-hourglass-half"></i><span id="timerModeText" class="ml-1 text-sm">Activado</span></button>
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <h3 class="text-xl font-bold mb-4 text-slate-700"><i class="fas fa-images text-blue-600 mr-2"></i>Logos Institucionales (Max 3)</h3>
+                    <p class="text-sm text-slate-500 mb-4">Estos logos se centrarán automáticamente en el encabezado del certificado PDF.</p>
+                    <div id="logo-uploads" class="space-y-4">
+                        <input type="file" id="logo1" accept="image/png, image/jpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                        <input type="file" id="logo2" accept="image/png, image/jpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                        <input type="file" id="logo3" accept="image/png, image/jpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
                     </div>
                 </div>
-                <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden"><div id="progressBar" class="bg-red-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div></div>
-            </div>
-            <div id="scenarioContainer" class="max-w-4xl mx-auto"></div>
-        </div>
-    </div>
-    
-    <!-- ============================================ -->
-    <!-- MODAL CAPTURA LEAD -->
-    <!-- ============================================ -->
-    <div id="leadModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-8">
-            <div class="text-center mb-6"><div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-trophy text-4xl text-red-600"></i></div><h2 class="text-2xl font-bold">¡Simulación Completa!</h2><p class="text-gray-600">Ingresá tus datos para ver tu análisis</p></div>
-            <form id="leadForm" class="space-y-4">
-                <div><input type="text" id="leadName" placeholder="Nombre completo *" required class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-red-500"></div>
-                <div><input type="tel" id="leadWhatsapp" placeholder="WhatsApp *" required class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-red-500"></div>
-                <div><input type="email" id="leadEmail" placeholder="Email *" required class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-red-500"></div>
-                <div><input type="text" id="leadCity" placeholder="Ciudad" class="w-full px-4 py-3 border rounded-lg"></div>
-                <select id="leadExperience" class="w-full px-4 py-3 border rounded-lg"><option value="">Experiencia previa</option><option value="ninguna">Ninguna</option><option value="basica">Básica</option><option value="intermedia">Intermedia</option><option value="avanzada">Avanzada</option><option value="instructor">Instructor</option></select>
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition">Ver mi análisis completo <i class="fas fa-arrow-right ml-2"></i></button>
-            </form>
-        </div>
-    </div>
-    
-    <!-- ============================================ -->
-    <!-- RESULTADOS DASHBOARD -->
-    <!-- ============================================ -->
-    <div id="resultsPage" class="min-h-screen hidden bg-gradient-to-br from-gray-900 to-gray-800 py-12">
-        <div class="container mx-auto px-4 max-w-6xl">
-            <div class="text-center mb-12"><h1 class="text-4xl md:text-6xl font-bold text-white mb-4" id="resultLevel">-</h1><p class="text-xl text-gray-300">Tu puntaje: <span id="resultScore" class="font-bold text-red-500">-</span> / <span id="resultTotal">100</span></p></div>
-            <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8"><canvas id="radarChart" height="400"></canvas></div>
-            <div class="grid md:grid-cols-2 gap-8 mb-8">
-                <div class="bg-green-900/30 rounded-2xl p-8"><h3 class="text-xl font-bold text-green-400 mb-4"><i class="fas fa-check-circle mr-2"></i>Fortalezas</h3><ul id="strengthsList" class="space-y-2 text-gray-200"></ul></div>
-                <div class="bg-red-900/30 rounded-2xl p-8"><h3 class="text-xl font-bold text-red-400 mb-4"><i class="fas fa-exclamation-triangle mr-2"></i>Áreas de Mejora</h3><ul id="weaknessesList" class="space-y-2 text-gray-200"></ul></div>
-            </div>
-            <div class="bg-blue-900/30 rounded-2xl p-8 mb-8"><h3 class="text-xl font-bold text-blue-400 mb-4"><i class="fas fa-graduation-cap mr-2"></i>Recomendación</h3><p id="recommendationText" class="text-gray-200 text-lg"></p></div>
-            <div class="text-center">
-                <button onclick="resetToLanding()" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-8 py-4 rounded-xl mr-4"><i class="fas fa-redo mr-2"></i>Volver a evaluar</button>
-                <button onclick="generateCertificate()" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-xl mr-4"><i class="fas fa-certificate mr-2"></i>Descargar Certificado</button>
-                <button onclick="showCampus()" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-8 py-4 rounded-xl"><i class="fas fa-shopping-cart mr-2"></i>Ir al Campus Virtual</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- ============================================ -->
-    <!-- CAMPUS VIRTUAL (Cursos + PDFs + Compras) -->
-    <!-- ============================================ -->
-    <div id="campusPage" class="min-h-screen hidden bg-gray-100">
-        <div class="flex h-screen">
-            <div class="campus-sidebar w-80 text-white p-6 overflow-y-auto">
-                <div class="mb-8"><h2 class="text-2xl font-bold"><i class="fas fa-graduation-cap text-red-500 mr-2"></i>Pulse Campus</h2><p class="text-gray-400 text-sm mt-1">by Asari Medical</p></div>
-                <div class="space-y-2">
-                    <button onclick="filterCourses('all')" class="w-full text-left px-4 py-2 rounded-lg hover:bg-white/10 transition"><i class="fas fa-th-large mr-2"></i>Todos los cursos</button>
-                    <button onclick="filterCourses('emergencias')" class="w-full text-left px-4 py-2 rounded-lg hover:bg-white/10 transition"><i class="fas fa-heartbeat mr-2"></i>Emergencias</button>
-                    <button onclick="filterCourses('tactico')" class="w-full text-left px-4 py-2 rounded-lg hover:bg-white/10 transition"><i class="fas fa-shield-alt mr-2"></i>Medicina Táctica</button>
-                    <button onclick="filterCourses('simulacion')" class="w-full text-left px-4 py-2 rounded-lg hover:bg-white/10 transition"><i class="fas fa-laptop-medical mr-2"></i>Simulación</button>
-                </div>
-                <div class="mt-8 pt-8 border-t border-gray-700">
-                    <div id="userInfoSidebar" class="text-sm"><i class="fas fa-user-circle mr-2"></i><span id="sidebarUserName">Invitado</span></div>
-                    <button onclick="logout()" class="mt-4 text-red-400 hover:text-red-300 text-sm"><i class="fas fa-sign-out-alt mr-2"></i>Cerrar sesión</button>
-                </div>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-8">
-                <div class="flex justify-between items-center mb-8">
-                    <h1 class="text-3xl font-bold text-gray-800">Catálogo de Cursos</h1>
-                    <button onclick="closeCampus()" class="text-gray-600 hover:text-gray-800"><i class="fas fa-times text-2xl"></i></button>
-                </div>
-                <div id="coursesGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- ============================================ -->
-    <!-- MODAL LOGIN ADMIN -->
-    <!-- ============================================ -->
-    <div id="adminLoginModal" class="fixed inset-0 bg-black/90 modal-overlay z-50 hidden items-center justify-center">
-        <div class="bg-white rounded-2xl max-w-md w-full p-8">
-            <div class="text-center mb-6"><i class="fas fa-lock text-5xl text-red-600 mb-4"></i><h2 class="text-2xl font-bold">Acceso Administrador</h2><p class="text-gray-600">Ingresá tus credenciales</p></div>
-            <form id="adminLoginForm">
-                <div><input type="text" id="adminUser" placeholder="Usuario" class="w-full px-4 py-3 border rounded-lg mb-4" required></div>
-                <div><input type="password" id="adminPass" placeholder="Contraseña" class="w-full px-4 py-3 border rounded-lg mb-4" required></div>
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg">Ingresar</button>
-            </form>
-            <p class="text-xs text-gray-500 text-center mt-4">admin@asari.com / MYM658</p>
-        </div>
-    </div>
-    
-    <!-- ============================================ -->
-    <!-- MODAL AGREGAR/EDITAR CURSO -->
-    <!-- ============================================ -->
-    <div id="courseModal" class="fixed inset-0 bg-black/90 modal-overlay z-50 hidden items-center justify-center">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-8">
-            <div class="text-center mb-6"><i class="fas fa-book text-4xl text-red-600 mb-4"></i><h2 id="courseModalTitle" class="text-2xl font-bold">Agregar Curso</h2></div>
-            <form id="courseForm">
-                <input type="hidden" id="courseId">
-                <div><input type="text" id="courseTitle" placeholder="Título del curso" class="w-full px-4 py-3 border rounded-lg mb-4" required></div>
-                <div><textarea id="courseDescription" placeholder="Descripción" rows="3" class="w-full px-4 py-3 border rounded-lg mb-4" required></textarea></div>
-                <div><select id="courseCategory" class="w-full px-4 py-3 border rounded-lg mb-4"><option value="emergencias">Emergencias</option><option value="tactico">Medicina Táctica</option><option value="simulacion">Simulación</option></select></div>
-                <div><input type="number" id="coursePrice" placeholder="Precio (ARS)" class="w-full px-4 py-3 border rounded-lg mb-4" required></div>
-                <div><input type="text" id="courseDuration" placeholder="Duración (ej: 80 horas)" class="w-full px-4 py-3 border rounded-lg mb-4" required></div>
-                <div><input type="text" id="courseImage" placeholder="Icono FA (ej: fa-heartbeat)" class="w-full px-4 py-3 border rounded-lg mb-4"></div>
-                <div><input type="text" id="coursePaymentLink" placeholder="Link de pago (Mercado Pago, PayPal)" class="w-full px-4 py-3 border rounded-lg mb-4"></div>
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg">Guardar Curso</button>
-            </form>
-            <button onclick="closeCourseModal()" class="w-full mt-3 text-gray-500 hover:text-gray-700">Cancelar</button>
-        </div>
-    </div>
-    
-    <!-- ============================================ -->
-    <!-- PANEL ADMIN (protegido) -->
-    <!-- ============================================ -->
-    <div id="adminPanel" class="min-h-screen hidden bg-gray-100 py-8">
-        <div class="container mx-auto px-4 max-w-7xl">
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-                <div class="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white flex justify-between items-center">
-                    <div><h1 class="text-3xl font-bold">Panel Administrador</h1><p>Pulse Triage by Asari Medical - Gestión completa</p></div>
-                    <button onclick="logoutAdmin()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg"><i class="fas fa-sign-out-alt mr-2"></i>Salir</button>
-                </div>
-                <div class="border-b border-gray-200">
-                    <div class="flex overflow-x-auto">
-                        <button onclick="showAdminTab('analytics')" class="px-6 py-3 font-semibold text-gray-600 hover:text-red-600 border-b-2 border-transparent hover:border-red-600 whitespace-nowrap">📊 Analytics</button>
-                        <button onclick="showAdminTab('leads')" class="px-6 py-3 font-semibold text-gray-600 hover:text-red-600 border-b-2 border-transparent hover:border-red-600 whitespace-nowrap">👥 Leads</button>
-                        <button onclick="showAdminTab('courses')" class="px-6 py-3 font-semibold text-gray-600 hover:text-red-600 border-b-2 border-transparent hover:border-red-600 whitespace-nowrap">📚 Cursos</button>
-                        <button onclick="showAdminTab('users')" class="px-6 py-3 font-semibold text-gray-600 hover:text-red-600 border-b-2 border-transparent hover:border-red-600 whitespace-nowrap">👤 Usuarios</button>
-                        <button onclick="showAdminTab('settings')" class="px-6 py-3 font-semibold text-gray-600 hover:text-red-600 border-b-2 border-transparent hover:border-red-600 whitespace-nowrap">⚙️ Configuración</button>
+
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                    <h3 class="text-xl font-bold mb-4 text-slate-700"><i class="fas fa-signature text-blue-600 mr-2"></i>Avales y Firmas (Max 3)</h3>
+                    <p class="text-sm text-slate-500 mb-4">Ingresá el sello de registro principal y las firmas de las autoridades.</p>
+                    
+                    <div class="mb-5">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Sello de Registro Nacional/Internacional</label>
+                        <input type="text" id="registrySealInput" placeholder="Ej: Registro REMTYO" value="Registro REMTYO" class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
-                </div>
-                <div id="adminAnalytics" class="p-6">
-                    <div class="grid md:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-blue-50 p-6 rounded-xl"><i class="fas fa-users text-3xl text-blue-600"></i><p class="text-gray-600 text-sm mt-2">Total Leads</p><p id="adminTotalLeads" class="text-3xl font-bold">0</p></div>
-                        <div class="bg-green-50 p-6 rounded-xl"><i class="fas fa-chart-line text-3xl text-green-600"></i><p class="text-gray-600 text-sm mt-2">Conversión</p><p id="adminConversionRate" class="text-3xl font-bold">0%</p></div>
-                        <div class="bg-purple-50 p-6 rounded-xl"><i class="fas fa-trophy text-3xl text-purple-600"></i><p class="text-gray-600 text-sm mt-2">Score Promedio</p><p id="adminAvgScore" class="text-3xl font-bold">0</p></div>
-                        <div class="bg-orange-50 p-6 rounded-xl"><i class="fas fa-dollar-sign text-3xl text-orange-600"></i><p class="text-gray-600 text-sm mt-2">Ingresos</p><p id="adminRevenue" class="text-3xl font-bold">$0</p></div>
-                    </div>
-                    <canvas id="funnelChart" height="300"></canvas>
-                </div>
-                <div id="adminLeads" class="p-6 hidden">
-                    <div class="overflow-x-auto">
-                        <table class="admin-table w-full">
-                            <thead><tr><th>Nombre</th><th>Email</th><th>WhatsApp</th><th>Score</th><th>Nivel</th><th>Fecha</th></tr></thead>
-                            <tbody id="adminLeadsTable"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div id="adminCourses" class="p-6 hidden">
-                    <button onclick="showAddCourseModal()" class="bg-red-600 text-white px-4 py-2 rounded-lg mb-4"><i class="fas fa-plus mr-2"></i>Agregar Curso</button>
-                    <div id="adminCoursesList" class="space-y-4"></div>
-                </div>
-                <div id="adminUsers" class="p-6 hidden"><div id="adminUsersList" class="space-y-4"></div></div>
-                <div id="adminSettings" class="p-6 hidden">
-                    <div class="bg-gray-50 rounded-xl p-6">
-                        <h3 class="text-lg font-bold mb-4">Configuración del Sistema</h3>
-                        <div class="space-y-4">
-                            <div><label class="block text-sm font-semibold mb-2">WhatsApp Business Number</label><input type="text" id="settingsWhatsapp" value="54221362475" class="w-full px-4 py-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-semibold mb-2">Email de Soporte</label><input type="email" id="settingsEmail" value="soporte@asarimedical.com" class="w-full px-4 py-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-semibold mb-2">Tiempo por escenario (segundos)</label><input type="number" id="settingsTimer" value="30" class="w-full px-4 py-2 border rounded-lg"></div>
-                            <button onclick="saveSettings()" class="bg-red-600 text-white px-6 py-2 rounded-lg">Guardar Cambios</button>
+
+                    <div id="signature-uploads" class="space-y-3">
+                        <div class="flex gap-2 items-center bg-white p-2 rounded-xl border">
+                            <input type="text" placeholder="Nombre y Cargo 1" class="w-1/2 px-3 py-2 outline-none">
+                            <input type="file" accept="image/png" class="w-1/2 text-sm text-slate-500 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 cursor-pointer">
+                        </div>
+                        <div class="flex gap-2 items-center bg-white p-2 rounded-xl border">
+                            <input type="text" placeholder="Nombre y Cargo 2" class="w-1/2 px-3 py-2 outline-none">
+                            <input type="file" accept="image/png" class="w-1/2 text-sm text-slate-500 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 cursor-pointer">
+                        </div>
+                        <div class="flex gap-2 items-center bg-white p-2 rounded-xl border">
+                            <input type="text" placeholder="Nombre y Cargo 3" class="w-1/2 px-3 py-2 outline-none">
+                            <input type="file" accept="image/png" class="w-1/2 text-sm text-slate-500 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 cursor-pointer">
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <button onclick="SaaSManager.saveSettings()" class="mt-8 bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl font-bold w-full transition shadow-lg text-lg">
+                <i class="fas fa-save mr-2"></i>Guardar Configuración de la Academia
+            </button>
         </div>
     </div>
-    
-    <script>
-        // ============================================
-        // ESCENARIOS CON OPCIONES ALEATORIZADAS
-        // ============================================
-        const SCENARIOS_RAW = [
-            { id:1, title:"PCR en Centro Comercial", context:"Varón 58 años, colapso súbito.", vitals:"Inconsciente, apnea, sin pulso", timeLimit:30,
-              options:[{text:"Iniciar RCP 30:2 y solicitar DEA",correct:true,feedback:"Correcto: Prioridad compresiones y desfibrilador."},
-                       {text:"Administrar adrenalina IM",correct:false,feedback:"Error: Adrenalina IM es para anafilaxia."},
-                       {text:"Trasladar inmediatamente",correct:false,feedback:"Error: RCP in situ antes del traslado."},
-                       {text:"Verificar pulso 30 segundos",correct:false,feedback:"Error: No demorar RCP."}] },
-            { id:2, title:"Shock Hemorrágico Táctico", context:"Herida por arma blanca en muslo. Sangrado profuso.", vitals:"FC 130, PA 80/50, palidez", timeLimit:30,
-              options:[{text:"Aplicar torniquete inmediato",correct:true,feedback:"Correcto: Torniquete salva vidas."},
-                       {text:"Presión directa y esperar",correct:false,feedback:"Error: No suficiente para hemorragia arterial."},
-                       {text:"Elevar miembro",correct:false,feedback:"Error: Pérdida de tiempo."},
-                       {text:"Ácido tranexámico IM",correct:false,feedback:"Error: No detiene sangrado activo."}] },
-            { id:3, title:"Triage Múltiples Víctimas", context:"Accidente autobús. 15 víctimas.", vitals:"Mujer 30 años, respira, FC 120", timeLimit:30,
-              options:[{text:"Amarillo (retrasado)",correct:true,feedback:"Correcto: Taquicardia pero estable."},
-                       {text:"Rojo (inmediato)",correct:false,feedback:"Error: No cumple criterios ROJO."},
-                       {text:"Verde (leve)",correct:false,feedback:"Error: Taquicardia sugiere amarillo."},
-                       {text:"Negro (fallecido)",correct:false,feedback:"Error: Respira."}] },
-            { id:4, title:"Convulsión Pediátrica", context:"Niño 4 años, convulsión 4 minutos.", vitals:"SatO2 92%, FC 140", timeLimit:30,
-              options:[{text:"Posición lateral + oxígeno",correct:true,feedback:"Correcto: Manejo de vía aérea."},
-                       {text:"Diazepam rectal",correct:false,feedback:"Error: Esperar a >5 min."},
-                       {text:"Succión endotraqueal",correct:false,feedback:"Error: No indicado."},
-                       {text:"Fenitoína IV",correct:false,feedback:"Error: Segunda línea."}] },
-            { id:5, title:"DEA y RCP Avanzada", context:"DEA indica 'shock no recomendado'.", vitals:"Ritmo organizado sin pulso (AESP)", timeLimit:30,
-              options:[{text:"Continuar RCP + adrenalina IV",correct:true,feedback:"Correcto: AESP requiere RCP + vasopresor."},
-                       {text:"Descargar shock",correct:false,feedback:"Error: Solo ritmos desfibrilables."},
-                       {text:"Detener maniobras",correct:false,feedback:"Error: AESP reversible."},
-                       {text:"Amiodarona IV",correct:false,feedback:"Error: Para FV/TV."}] },
-            { id:6, title:"Neumotórax a Tensión", context:"Herida torácica. Deterioro súbito.", vitals:"TA 70/40, desviación traqueal", timeLimit:30,
-              options:[{text:"Punción aguja 2do espacio IC",correct:true,feedback:"Correcto: Descompresión inmediata."},
-                       {text:"Aumentar ventilación",correct:false,feedback:"Error: Empeora."},
-                       {text:"Fluidos IV",correct:false,feedback:"Error: No resuelve."},
-                       {text:"Sonda torácica",correct:false,feedback:"Error: Lleva tiempo."}] },
-            { id:7, title:"Sobredosis Opioides", context:"Joven con jeringa. Depresión respiratoria.", vitals:"FR 6, pupilas puntiformes", timeLimit:30,
-              options:[{text:"Naloxona 0.4mg IV/IM",correct:true,feedback:"Correcto: Antídoto específico."},
-                       {text:"Flumazenilo IV",correct:false,feedback:"Error: Para benzodiazepinas."},
-                       {text:"Intubación",correct:false,feedback:"Error: Invasivo innecesario."},
-                       {text:"Posición seguridad",correct:false,feedback:"Error: Insuficiente."}] },
-            { id:8, title:"Quemaduras por Inhalación", context:"Incendio. Dificultad respiratoria.", vitals:"Roncus, SatO2 85%", timeLimit:30,
-              options:[{text:"Intubación orotraqueal",correct:true,feedback:"Correcto: Edema de vía aérea."},
-                       {text:"Máscara O2 simple",correct:false,feedback:"Error: Insuficiente."},
-                       {text:"Corticoides inhalados",correct:false,feedback:"Error: No resuelve."},
-                       {text:"Broncodilatadores",correct:false,feedback:"Error: No es asma."}] },
-            { id:9, title:"Infarto Agudo Miocardio", context:"Dolor opresivo en pecho.", vitals:"ECG: supra ST", timeLimit:30,
-              options:[{text:"Aspirina 300mg + oxígeno si sat<90%",correct:true,feedback:"Correcto: MONA pero O2 solo si sat<90%."},
-                       {text:"Nitroglicerina sin aspirina",correct:false,feedback:"Error: Aspirina prioritaria."},
-                       {text:"Solo oxígeno",correct:false,feedback:"Error: Requiere antiagregante."},
-                       {text:"Desfibrilador",correct:false,feedback:"Error: No es prioridad."}] },
-            { id:10, title:"Parto Urgente", context:"Gestante 38 semanas, pujo inminente.", vitals:"FCF 140, líquido claro", timeLimit:30,
-              options:[{text:"Preparar campo estéril, apoyar parto",correct:true,feedback:"Correcto: Dejar que ocurra espontáneamente."},
-                       {text:"Ordenar pujar forzado",correct:false,feedback:"Error: No forzar."},
-                       {text:"Acelerar traslado",correct:false,feedback:"Error: Riesgo parto inseguro."},
-                       {text:"Oxitocina",correct:false,feedback:"Error: Riesgo hiperestimulación."}] }
-        ];
-        
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
-        
-        const SCENARIOS = SCENARIOS_RAW.map(scenario => ({
-            ...scenario,
-            options: shuffleArray([...scenario.options])
-        }));
-        
-        // Cursos iniciales
-        let COURSES = [
-            { id:1, title:"Emergencias Médicas Avanzadas", category:"emergencias", description:"Protocolos AHA 2025, RCP avanzada, manejo de vía aérea.", price:49900, duration:"80 horas", image:"fa-heartbeat", paymentLink:"https://mpago.la/emer-gencias", enrolled:false },
-            { id:2, title:"Paramédico Táctico", category:"tactico", description:"Atención en zonas hostiles, TCCC, control de hemorragias.", price:69900, duration:"120 horas", image:"fa-shield-alt", paymentLink:"https://mpago.la/paramedico-tactico", enrolled:false },
-            { id:3, title:"Simulación Clínica con DEA", category:"simulacion", description:"Manejo de desfibrilador, ritmos, casos prácticos.", price:39900, duration:"40 horas", image:"fa-laptop-medical", paymentLink:"https://mpago.la/simulacion-dea", enrolled:false },
-            { id:4, title:"Triage y Catástrofes", category:"emergencias", description:"START, SALT, manejo de múltiples víctimas.", price:44900, duration:"60 horas", image:"fa-users", paymentLink:"https://mpago.la/triage", enrolled:false },
-            { id:5, title:"Pediatría en Emergencias", category:"emergencias", description:"PCR pediátrica, convulsiones, vía aérea pediátrica.", price:54900, duration:"70 horas", image:"fa-child", paymentLink:"https://mpago.la/pediatria", enrolled:false },
-            { id:6, title:"Medicina Táctica Avanzada", category:"tactico", description:"TCCC para fuerzas especiales, evacuación táctica.", price:89900, duration:"150 horas", image:"fa-crosshairs", paymentLink:"https://mpago.la/tactica-avanzada", enrolled:false }
-        ];
-        
-        // Variables globales
-        let currentScenarioIndex = 0;
-        let userAnswers = [];
-        let score = 0;
-        let soundEnabled = true;
-        let timerEnabled = true;
-        let currentTimer = null;
-        let leads = JSON.parse(localStorage.getItem('pulse_triage_leads') || '[]');
-        let users = JSON.parse(localStorage.getItem('pulse_users') || '[{"email":"admin@asari.com","password":"MYM658","name":"Administrador","role":"admin"},{"email":"demo@asari.com","password":"demo123","name":"Usuario Demo","role":"user","purchasedCourses":[]}]');
-        let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        let radarChartInstance = null;
-        let funnelChartInstance = null;
-        let lastScore = 0;
-        
-        // Cargar cursos guardados
-        const savedCourses = localStorage.getItem('pulse_courses');
-        if (savedCourses) COURSES = JSON.parse(savedCourses);
-        
-        function saveCoursesToLocal() {
-            localStorage.setItem('pulse_courses', JSON.stringify(COURSES));
-        }
-        
-        // ============================================
-        // SIMULADOR
-        // ============================================
-        function startSimulation() {
-            currentScenarioIndex = 0;
-            userAnswers = [];
-            score = 0;
-            landingPage.classList.add('hidden');
-            simulatorPage.classList.remove('hidden');
-            updateScenarioDisplay();
-        }
-        
-        function updateScenarioDisplay() {
-            const scenario = SCENARIOS[currentScenarioIndex];
-            const container = document.getElementById('scenarioContainer');
-            const progress = ((currentScenarioIndex) / SCENARIOS.length) * 100;
-            document.getElementById('progressBar').style.width = `${progress}%`;
-            document.getElementById('currentScenarioIndex').innerText = currentScenarioIndex + 1;
-            
-            if (currentTimer) clearInterval(currentTimer);
-            
-            container.innerHTML = `
-                <div class="slide-in">
-                    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-                        ${timerEnabled ? `
-                        <div class="flex justify-center mb-6">
-                            <div class="bg-black/50 rounded-lg px-6 py-3">
-                                <div class="text-4xl font-mono font-bold text-red-500 timer-warning" id="timerDisplay">${scenario.timeLimit}</div>
-                                <div class="text-xs text-gray-400">segundos restantes</div>
-                            </div>
-                        </div>
-                        ` : ''}
-                        <h2 class="text-2xl font-bold text-white mb-4">${scenario.title}</h2>
-                        <div class="bg-red-900/30 rounded-xl p-5 mb-6">
-                            <p class="text-gray-200 mb-2"><strong class="text-red-400">📋 Contexto:</strong> ${scenario.context}</p>
-                            <p class="text-gray-200"><strong class="text-red-400">📊 Signos vitales:</strong> ${scenario.vitals}</p>
-                        </div>
-                        <div class="space-y-3">
-                            ${scenario.options.map((opt, idx) => `
-                                <button onclick="checkAnswer(${idx}, ${opt.correct}, \`${opt.feedback.replace(/`/g, "'")}\`)"
-                                        class="w-full text-left p-4 bg-white/5 hover:bg-white/15 rounded-xl transition text-white border border-white/10 hover:border-red-500">
-                                    <span class="font-medium">${String.fromCharCode(65+idx)}.</span> ${opt.text}
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            if (timerEnabled) {
-                let timeLeft = scenario.timeLimit;
-                const timerDisplay = document.getElementById('timerDisplay');
-                if (timerDisplay) {
-                    currentTimer = setInterval(() => {
-                        timeLeft--;
-                        if (timerDisplay) timerDisplay.innerText = timeLeft;
-                        if (timeLeft <= 5 && timeLeft > 0) timerDisplay.classList.add('timer-warning');
-                        if (timeLeft <= 0) {
-                            clearInterval(currentTimer);
-                            handleTimeout();
-                        }
-                    }, 1000);
-                }
-            }
-        }
-        
-        function handleTimeout() {
-            if (soundEnabled) playSound('incorrect');
-            showToast('⏰ Tiempo agotado!', false);
-            userAnswers.push({ correct: false, feedback: 'Tiempo agotado' });
-            nextScenario();
-        }
-        
-        function checkAnswer(optionIndex, isCorrect, feedback) {
-            if (currentTimer) clearInterval(currentTimer);
-            if (soundEnabled) playSound(isCorrect ? 'correct' : 'incorrect');
-            if (isCorrect) score += 10;
-            userAnswers.push({ correct: isCorrect, feedback: feedback });
-            showToast(feedback, isCorrect);
-            nextScenario();
-        }
-        
-        function showToast(message, isSuccess) {
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${isSuccess ? 'bg-green-600' : 'bg-red-600'} text-white`;
-            toast.innerHTML = isSuccess ? `<i class="fas fa-check-circle mr-2"></i>${message}` : `<i class="fas fa-times-circle mr-2"></i>${message}`;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        function playSound(type) {
-            try {
-                const audio = new Audio();
-                audio.src = type === 'correct' ? 'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3' : 'https://www.soundjay.com/misc/sounds/error-01.mp3';
-                audio.volume = 0.2;
-                audio.play().catch(e => console.log('Audio no disponible'));
-            } catch(e) {}
-        }
-        
-        function nextScenario() {
-            if (currentScenarioIndex + 1 < SCENARIOS.length) {
-                currentScenarioIndex++;
-                updateScenarioDisplay();
-            } else {
-                simulatorPage.classList.add('hidden');
-                leadModal.classList.remove('hidden');
-                leadModal.style.display = 'flex';
-            }
-        }
-        
-        function goBackToLanding() {
-            if (currentTimer) clearInterval(currentTimer);
-            landingPage.classList.remove('hidden');
-            simulatorPage.classList.add('hidden');
-        }
-        
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            document.getElementById('soundIcon').className = soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-        }
-        
-        function toggleTimer() {
-            timerEnabled = !timerEnabled;
-            document.getElementById('timerModeText').innerText = timerEnabled ? 'Activado' : 'Desactivado';
-        }
-        
-        // Captura lead
-        document.getElementById('leadForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const leadData = {
-                id: Date.now(),
-                name: document.getElementById('leadName').value,
-                whatsapp: document.getElementById('leadWhatsapp').value,
-                email: document.getElementById('leadEmail').value,
-                city: document.getElementById('leadCity').value,
-                experience: document.getElementById('leadExperience').value,
-                score: score,
-                totalQuestions: SCENARIOS.length,
-                correctAnswers: userAnswers.filter(a => a.correct).length,
-                date: new Date().toISOString()
-            };
-            
-            leads.unshift(leadData);
-            localStorage.setItem('pulse_triage_leads', JSON.stringify(leads));
-            lastScore = score;
-            
-            leadModal.classList.add('hidden');
-            showResults(leadData);
-            
-            const percentage = (score / (SCENARIOS.length * 10)) * 100;
-            let level = percentage >= 80 ? 'Alto Criterio' : percentage >= 60 ? 'Avanzado' : percentage >= 40 ? 'Intermedio' : 'Principiante';
-            window.open(`https://wa.me/54221362475?text=Hola%20${encodeURIComponent(leadData.name)}!%20Mi%20resultado%20fue%20${level}%20con%20${score}%20puntos`, '_blank');
-        });
-        
-        function getClinicalLevel(percentage) {
-            if (percentage >= 80) return { level: '🏆 Alto Criterio Clínico', color: 'text-purple-400' };
-            if (percentage >= 60) return { level: '⚡ Operador Avanzado', color: 'text-blue-400' };
-            if (percentage >= 40) return { level: '📚 Operador Intermedio', color: 'text-green-400' };
-            return { level: '🌱 Principiante', color: 'text-orange-400' };
-        }
-        
-        function generateCertificate() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('landscape', 'mm', 'a4');
-            const leadName = document.getElementById('leadName')?.value || 'Participante';
-            const percentage = (lastScore / (SCENARIOS.length * 10)) * 100;
-            const levelInfo = getClinicalLevel(percentage);
-            
-            doc.setFillColor(239, 68, 68);
-            doc.rect(0, 0, 297, 210, 'F');
-            
-            doc.setDrawColor(255, 255, 255);
-            doc.setLineWidth(2);
-            doc.rect(10, 10, 277, 190);
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(40);
-            doc.text('CERTIFICADO DE EVALUACIÓN', 148.5, 50, { align: 'center' });
-            
-            doc.setFontSize(16);
-            doc.text('Este certificado acredita que', 148.5, 85, { align: 'center' });
-            
-            doc.setFontSize(28);
-            doc.setTextColor(255, 215, 0);
-            doc.text(leadName.toUpperCase(), 148.5, 110, { align: 'center' });
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(16);
-            doc.text(`ha completado el Evaluador de Criterio Paramédico`, 148.5, 135, { align: 'center' });
-            doc.text(`alcanzando el nivel: ${levelInfo.level} con ${lastScore} puntos sobre ${SCENARIOS.length*10}`, 148.5, 155, { align: 'center' });
-            
-            doc.setFontSize(12);
-            doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 148.5, 180, { align: 'center' });
-            doc.text('Pulse Triage by Asari Medical', 148.5, 195, { align: 'center' });
-            
-            doc.save(`certificado_pulse_triage_${leadName}.pdf`);
-        }
-        
-        function showResults(leadData) {
-            const percentage = (leadData.score / (SCENARIOS.length * 10)) * 100;
-            const levelInfo = getClinicalLevel(percentage);
-            
-            document.getElementById('resultLevel').innerHTML = levelInfo.level;
-            document.getElementById('resultScore').innerText = leadData.score;
-            
-            const cardiacCorrect = userAnswers.slice(0,2).filter(a => a.correct).length;
-            const traumaCorrect = userAnswers.slice(1,3).filter(a => a.correct).length;
-            const triageCorrect = userAnswers.slice(2,4).filter(a => a.correct).length;
-            
-            if (radarChartInstance) radarChartInstance.destroy();
-            const ctx = document.getElementById('radarChart').getContext('2d');
-            radarChartInstance = new Chart(ctx, {
-                type: 'radar',
-                data: { labels: ['Cardiovascular', 'Trauma', 'Triage'], datasets: [{ label: 'Tu desempeño', data: [cardiacCorrect*50, traumaCorrect*50, triageCorrect*50], backgroundColor: 'rgba(239,68,68,0.2)', borderColor: '#ef4444' }] },
-                options: { scales: { r: { beginAtZero: true, max: 100, ticks: { color: 'white' }, grid: { color: 'rgba(255,255,255,0.2)' } } }, plugins: { legend: { labels: { color: 'white' } } } }
-            });
-            
-            document.getElementById('strengthsList').innerHTML = cardiacCorrect >= 1 ? '<li>✅ Buen manejo cardiovascular</li>' : '<li>⚠️ Mejorar en emergencias cardíacas</li>';
-            document.getElementById('weaknessesList').innerHTML = traumaCorrect < 1 ? '<li>⚠️ Reforzar protocolos de trauma</li>' : '<li>✅ Buen desempeño en trauma</li>';
-            document.getElementById('recommendationText').innerHTML = percentage >= 60 ? 'Excelente nivel! Te recomendamos nuestros cursos avanzados.' : 'Te recomendamos comenzar con nuestros cursos básicos.';
-            
-            landingPage.classList.add('hidden');
-            resultsPage.classList.remove('hidden');
-        }
-        
-        function resetToLanding() {
-            resultsPage.classList.add('hidden');
-            landingPage.classList.remove('hidden');
-        }
-        
-        function showCampus() {
-            if (!currentUser) {
-                showLoginModal();
-                return;
-            }
-            renderCampus();
-            resultsPage.classList.add('hidden');
-            landingPage.classList.add('hidden');
-            document.getElementById('campusPage').classList.remove('hidden');
-        }
-        
-        function closeCampus() {
-            document.getElementById('campusPage').classList.add('hidden');
-            landingPage.classList.remove('hidden');
-        }
-        
-        function renderCampus() {
-            const grid = document.getElementById('coursesGrid');
-            const userCourses = currentUser?.purchasedCourses || [];
-            
-            grid.innerHTML = COURSES.map(course => `
-                <div class="course-card bg-white rounded-2xl shadow-lg overflow-hidden">
-                    <div class="bg-gradient-to-r from-red-500 to-red-600 p-4 text-white text-center">
-                        <i class="fas ${course.image} text-4xl"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2">${course.title}</h3>
-                        <p class="text-gray-600 text-sm mb-4">${course.description}</p>
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-2xl font-bold text-red-600">$${course.price.toLocaleString()}</span>
-                            <span class="text-sm text-gray-500"><i class="far fa-clock"></i> ${course.duration}</span>
-                        </div>
-                        ${userCourses.includes(course.id) ? 
-                            `<button onclick="downloadCourseMaterial(${course.id})" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition"><i class="fas fa-download mr-2"></i>Descargar Material</button>` :
-                            `<a href="${course.paymentLink}" target="_blank" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition text-center block"><i class="fas fa-shopping-cart mr-2"></i>Comprar $${course.price.toLocaleString()}</a>`
-                        }
-                    </div>
-                </div>
-            `).join('');
-            
-            document.getElementById('sidebarUserName').innerText = currentUser?.name || 'Invitado';
-        }
-        
-        function downloadCourseMaterial(courseId) {
-            const course = COURSES.find(c => c.id === courseId);
-            if (course) {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                doc.setFontSize(20);
-                doc.text(course.title, 20, 20);
-                doc.setFontSize(12);
-                doc.text(course.description, 20, 40);
-                doc.text("Material de estudio:", 20, 70);
-                doc.text("1. Manual completo del curso", 20, 85);
-                doc.text("2. Casos prácticos resueltos", 20, 95);
-                doc.text("3. Simulacros de examen", 20, 105);
-                doc.text("4. Certificado digital", 20, 115);
-                doc.save(`${course.title.replace(/ /g, '_')}_material.pdf`);
-            }
-        }
-        
-        function filterCourses(category) {
-            const grid = document.getElementById('coursesGrid');
-            const filtered = category === 'all' ? COURSES : COURSES.filter(c => c.category === category);
-            const userCourses = currentUser?.purchasedCourses || [];
-            
-            grid.innerHTML = filtered.map(course => `
-                <div class="course-card bg-white rounded-2xl shadow-lg overflow-hidden">
-                    <div class="bg-gradient-to-r from-red-500 to-red-600 p-4 text-white text-center"><i class="fas ${course.image} text-4xl"></i></div>
-                    <div class="p-6"><h3 class="text-xl font-bold mb-2">${course.title}</h3><p class="text-gray-600 text-sm mb-4">${course.description}</p>
-                    <div class="flex justify-between items-center mb-4"><span class="text-2xl font-bold text-red-600">$${course.price.toLocaleString()}</span><span class="text-sm text-gray-500">${course.duration}</span></div>
-                    ${userCourses.includes(course.id) ? 
-                        `<button onclick="downloadCourseMaterial(${course.id})" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg"><i class="fas fa-download mr-2"></i>Descargar Material</button>` :
-                        `<a href="${course.paymentLink}" target="_blank" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg text-center block"><i class="fas fa-shopping-cart mr-2"></i>Comprar $${course.price.toLocaleString()}</a>`
-                    }</div>
-                </div>
-            `).join('');
-        }
-        
-        // ============================================
-        // AUTENTICACIÓN
-        // ============================================
-        function showLoginModal() {
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black/90 z-50 flex items-center justify-center';
-            modal.innerHTML = `
-                <div class="bg-white rounded-2xl max-w-md w-full p-8">
-                    <div class="text-center mb-6"><i class="fas fa-user-circle text-5xl text-red-600 mb-4"></i><h2 class="text-2xl font-bold">Iniciar Sesión</h2><p class="text-gray-600">Accede a tu campus virtual</p></div>
-                    <form id="userLoginForm">
-                        <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 border rounded-lg mb-4" required>
-                        <input type="password" id="loginPassword" placeholder="Contraseña" class="w-full px-4 py-3 border rounded-lg mb-4" required>
-                        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg">Ingresar</button>
-                    </form>
-                    <p class="text-center text-sm text-gray-500 mt-4">Demo: demo@asari.com / demo123</p>
-                    <button onclick="this.parentElement.parentElement.remove()" class="w-full mt-3 text-gray-500 hover:text-gray-700">Cerrar</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            document.getElementById('userLoginForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const email = document.getElementById('loginEmail').value;
-                const password = document.getElementById('loginPassword').value;
-                const user = users.find(u => u.email === email && u.password === password);
-                if (user) {
-                    currentUser = user;
-                    localStorage.setItem('currentUser', JSON.stringify(user));
-                    modal.remove();
-                    renderCampus();
-                    document.getElementById('campusPage').classList.remove('hidden');
-                } else {
-                    alert('Credenciales incorrectas. Usá demo@asari.com / demo123');
-                }
-            });
-        }
-        
-        function logout() {
-            currentUser = null;
-            localStorage.removeItem('currentUser');
-            closeCampus();
-            alert('Sesión cerrada correctamente');
-        }
-        
-        function scrollToTestimonials() {
-            document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // ============================================
-        // PANEL ADMIN CON AUTENTICACIÓN
-        // ============================================
-        let isAdminLoggedIn = false;
-        
-        function showAdminLogin() {
-            document.getElementById('adminLoginModal').style.display = 'flex';
-        }
-        
-        document.getElementById('adminLoginForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const user = document.getElementById('adminUser').value;
-            const pass = document.getElementById('adminPass').value;
-            
-            if (user === 'admin@asari.com' && pass === 'MYM658') {
-                isAdminLoggedIn = true;
-                document.getElementById('adminLoginModal').style.display = 'none';
-                showAdmin();
-            } else {
-                alert('Usuario o contraseña incorrectos');
-            }
-        });
-        
-        function showAdmin() {
-            if (!isAdminLoggedIn) {
-                showAdminLogin();
-                return;
-            }
-            landingPage.classList.add('hidden');
-            simulatorPage.classList.add('hidden');
-            resultsPage.classList.add('hidden');
-            document.getElementById('campusPage').classList.add('hidden');
-            adminPanel.classList.remove('hidden');
-            updateAdminData();
-        }
-        
-        function logoutAdmin() {
-            isAdminLoggedIn = false;
-            adminPanel.classList.add('hidden');
-            landingPage.classList.remove('hidden');
-        }
-        
-        function updateAdminData() {
-            const totalLeads = leads.length;
-            const convertedLeads = leads.filter(l => l.score >= 40).length;
-            const conversionRate = totalLeads ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
-            const avgScore = totalLeads ? (leads.reduce((sum, l) => sum + l.score, 0) / totalLeads).toFixed(0) : 0;
-            const totalRevenue = users.reduce((sum, u) => {
-                const purchased = u.purchasedCourses || [];
-                return sum + purchased.reduce((s, cId) => s + (COURSES.find(c => c.id === cId)?.price || 0), 0);
-            }, 0);
-            
-            document.getElementById('adminTotalLeads').innerText = totalLeads;
-            document.getElementById('adminConversionRate').innerText = conversionRate + '%';
-            document.getElementById('adminAvgScore').innerText = avgScore;
-            document.getElementById('adminRevenue').innerText = '$' + totalRevenue.toLocaleString();
-            
-            if (funnelChartInstance) funnelChartInstance.destroy();
-            const funnelCtx = document.getElementById('funnelChart')?.getContext('2d');
-            if (funnelCtx) {
-                funnelChartInstance = new Chart(funnelCtx, {
-                    type: 'bar',
-                    data: { labels: ['Visitas', 'Iniciaron', 'Completaron', 'Leads', 'Convertidos'], datasets: [{ label: 'Usuarios', data: [5000, 1250, 875, totalLeads, convertedLeads], backgroundColor: '#ef4444' }] }
-                });
-            }
-            
-            const tableBody = document.getElementById('adminLeadsTable');
-            tableBody.innerHTML = leads.slice(0, 50).map(lead => {
-                const percentage = (lead.score / (SCENARIOS.length * 10)) * 100;
-                let levelBadge = percentage >= 80 ? 'Alto Criterio' : percentage >= 60 ? 'Avanzado' : percentage >= 40 ? 'Intermedio' : 'Principiante';
-                return `<tr><td class="px-4 py-3">${lead.name}</td><td class="px-4 py-3">${lead.email}</td><td class="px-4 py-3">${lead.whatsapp}</td><td class="px-4 py-3">${lead.score}/100</td><td class="px-4 py-3">${levelBadge}</td><td class="px-4 py-3">${new Date(lead.date).toLocaleDateString()}</td></tr>`;
-            }).join('');
-            
-            const coursesDiv = document.getElementById('adminCoursesList');
-            coursesDiv.innerHTML = COURSES.map(c => `
-                <div class="bg-gray-50 rounded-xl p-4 flex justify-between items-center">
-                    <div><h3 class="font-semibold">${c.title}</h3><p class="text-sm text-gray-600">$${c.price.toLocaleString()} - ${c.duration}</p><p class="text-xs text-blue-600 truncate max-w-md">Link: ${c.paymentLink}</p></div>
-                    <div><button onclick="editCourseFromAdmin(${c.id})" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button onclick="deleteCourse(${c.id})" class="text-red-600"><i class="fas fa-trash"></i></button></div>
-                </div>
-            `).join('');
-            
-            const usersDiv = document.getElementById('adminUsersList');
-            usersDiv.innerHTML = users.filter(u => u.role !== 'admin').map(u => `
-                <div class="bg-gray-50 rounded-xl p-4"><div class="flex justify-between"><div><p class="font-semibold">${u.name}</p><p class="text-sm text-gray-600">${u.email}</p><p class="text-xs">Cursos comprados: ${(u.purchasedCourses || []).length}</p></div><button onclick="deleteUser('${u.email}')" class="text-red-600"><i class="fas fa-trash"></i></button></div></div>
-            `).join('');
-        }
-        
-        function showAdminTab(tab) {
-            document.getElementById('adminAnalytics').classList.add('hidden');
-            document.getElementById('adminLeads').classList.add('hidden');
-            document.getElementById('adminCourses').classList.add('hidden');
-            document.getElementById('adminUsers').classList.add('hidden');
-            document.getElementById('adminSettings').classList.add('hidden');
-            if (tab === 'analytics') document.getElementById('adminAnalytics').classList.remove('hidden');
-            if (tab === 'leads') document.getElementById('adminLeads').classList.remove('hidden');
-            if (tab === 'courses') document.getElementById('adminCourses').classList.remove('hidden');
-            if (tab === 'users') document.getElementById('adminUsers').classList.remove('hidden');
-            if (tab === 'settings') document.getElementById('adminSettings').classList.remove('hidden');
-        }
-        
-        let editingCourseId = null;
-        
-        function showAddCourseModal() {
-            editingCourseId = null;
-            document.getElementById('courseModalTitle').innerText = 'Agregar Curso';
-            document.getElementById('courseForm').reset();
-            document.getElementById('courseId').value = '';
-            document.getElementById('courseModal').style.display = 'flex';
-        }
-        
-        function editCourseFromAdmin(id) {
-            const course = COURSES.find(c => c.id === id);
-            if (course) {
-                editingCourseId = id;
-                document.getElementById('courseModalTitle').innerText = 'Editar Curso';
-                document.getElementById('courseId').value = course.id;
-                document.getElementById('courseTitle').value = course.title;
-                document.getElementById('courseDescription').value = course.description;
-                document.getElementById('courseCategory').value = course.category;
-                document.getElementById('coursePrice').value = course.price;
-                document.getElementById('courseDuration').value = course.duration;
-                document.getElementById('courseImage').value = course.image;
-                document.getElementById('coursePaymentLink').value = course.paymentLink;
-                document.getElementById('courseModal').style.display = 'flex';
-            }
-        }
-        
-        function closeCourseModal() {
-            document.getElementById('courseModal').style.display = 'none';
-        }
-        
-        document.getElementById('courseForm')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const courseData = {
-                id: editingCourseId || Date.now(),
-                title: document.getElementById('courseTitle').value,
-                description: document.getElementById('courseDescription').value,
-                category: document.getElementById('courseCategory').value,
-                price: parseInt(document.getElementById('coursePrice').value),
-                duration: document.getElementById('courseDuration').value,
-                image: document.getElementById('courseImage').value || 'fa-book',
-                paymentLink: document.getElementById('coursePaymentLink').value,
-                enrolled: false
-            };
-            
-            if (editingCourseId) {
-                const index = COURSES.findIndex(c => c.id === editingCourseId);
-                if (index !== -1) COURSES[index] = courseData;
-            } else {
-                COURSES.push(courseData);
-            }
-            
-            saveCoursesToLocal();
-            closeCourseModal();
-            updateAdminData();
-            alert(editingCourseId ? 'Curso actualizado' : 'Curso agregado');
-        });
-        
-        function deleteCourse(id) {
-            if (confirm('¿Eliminar este curso permanentemente?')) {
-                COURSES = COURSES.filter(c => c.id !== id);
-                saveCoursesToLocal();
-                updateAdminData();
-                alert('Curso eliminado');
-            }
-        }
-        
-        function deleteUser(email) {
-            if (confirm('¿Eliminar este usuario?')) {
-                users = users.filter(u => u.email !== email);
-                localStorage.setItem('pulse_users', JSON.stringify(users));
-                updateAdminData();
-                alert('Usuario eliminado');
-            }
-        }
-        
-        function saveSettings() {
-            const whatsapp = document.getElementById('settingsWhatsapp').value;
-            const email = document.getElementById('settingsEmail').value;
-            const timer = document.getElementById('settingsTimer').value;
-            localStorage.setItem('settings_whatsapp', whatsapp);
-            localStorage.setItem('settings_email', email);
-            localStorage.setItem('settings_timer', timer);
-            alert('Configuración guardada');
-        }
-        
-        // Admin shortcut: Ctrl + Shift + A
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-                e.preventDefault();
-                showAdminLogin();
-            }
-        });
-        
-        if (currentUser && currentUser.role !== 'admin') {
-            renderCampus();
-        }
-        
-        console.log('✅ Pulse Triage by Asari Medical - Sistema profesional completo');
-        console.log('🔐 Admin: admin@asari.com / MYM658');
-        console.log('🔐 Demo: demo@asari.com / demo123');
-    </script>
+
+    <script src="js/scenarios.js"></script>
+    <script src="js/pdf-generator.js"></script>
+    <script src="js/ai-tutor.js"></script>
+    <script src="js/saas-manager.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
