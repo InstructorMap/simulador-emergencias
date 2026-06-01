@@ -1,6 +1,6 @@
 const AITutor = {
     // Pegá tu API Key acá adentro de las comillas
-    apiKey: "TU_API_KEY_AQUI", 
+    apiKey: "------", 
     
     // Instrucción oculta para que Gemini se comporte como un experto paramédico
     systemPrompt: "Eres un instructor médico experto en atención prehospitalaria, trauma y emergencias. Responde de forma clara, directa y profesional. Si te preguntan algo fuera de la medicina o emergencias, di amablemente que solo puedes ayudar con temas clínicos.",
