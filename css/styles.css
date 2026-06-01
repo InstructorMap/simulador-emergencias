@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&display=swap');
+
+* { 
+    font-family: 'Inter', sans-serif; 
+}
+
+/* Variables Dinámicas para el modelo SaaS (Marca Blanca) */
+:root {
+    --tenant-primary: #2563eb; /* bg-blue-600 */
+    --tenant-secondary: #1e40af; /* bg-blue-800 */
+}
+
+/* Animaciones del Simulador */
+@keyframes pulse-alert {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+}
+
+.timer-warning { 
+    animation: pulse-alert 1s infinite; 
+    color: #ef4444 !important;
+}
+
+.slide-in { 
+    animation: slideIn 0.3s ease-out; 
+}
+
+@keyframes slideIn { 
+    from { opacity: 0; transform: translateX(20px); } 
+    to { opacity: 1; transform: translateX(0); } 
+}
+
+/* Ocultar scrollbar para un look más app nativa */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a; 
+}
+::-webkit-scrollbar-thumb {
+    background: #334155; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569; 
+}
