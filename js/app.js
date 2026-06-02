@@ -1,22 +1,19 @@
 // ============================================
-// BASE DE DATOS DE CURSOS DEL CAMPUS
+// BASE DE DATOS DE CURSOS DEL CAMPUS (Dinámica)
 // ============================================
-const CoursesDB = [
-    { id: 1, title: "Trauma y Control de Hemorragias", desc: "Protocolos internacionales TCCC/TECC, uso de torniquetes y vendajes hemostáticos.", icon: "fa-tint", price: 45000, link: "https://mpago.la/ejemplo1", purchased: false },
-    { id: 2, title: "Soporte Vital Básico y DEA", desc: "Reanimación cardiopulmonar de alta calidad según guías actualizadas 2025.", icon: "fa-heartbeat", price: 35000, link: "https://mpago.la/ejemplo2", purchased: true }, // Marcado como comprado para probar el PDF
-    { id: 3, title: "Triage y Múltiples Víctimas", desc: "Manejo de incidentes con saldos masivos de víctimas. Protocolos START y SALT.", icon: "fa-users", price: 42000, link: "https://mpago.la/ejemplo3", purchased: false },
-    { id: 4, title: "Manejo Avanzado de Vía Aérea", desc: "Dispositivos supraglóticos, intubación endotraqueal y vía aérea quirúrgica.", icon: "fa-lungs", price: 55000, link: "https://mpago.la/ejemplo4", purchased: false },
-    { id: 5, title: "Medicina Táctica Operativa", desc: "Atención bajo fuego, extracción táctica y medicina en zonas hostiles.", icon: "fa-shield-alt", price: 65000, link: "https://mpago.la/ejemplo5", purchased: false },
-    { id: 6, title: "Urgencias Pediátricas", desc: "Soporte vital avanzado pediátrico, reconocimiento de shock y convulsiones.", icon: "fa-child", price: 48000, link: "https://mpago.la/ejemplo6", purchased: false },
-    { id: 7, title: "Farmacología Prehospitalaria", desc: "Cálculo de dosis, vasopresores, analgésicos y vías de administración en emergencias.", icon: "fa-pills", price: 40000, link: "https://mpago.la/ejemplo7", purchased: false },
-    { id: 8, title: "Electrocardiografía Paramédica", desc: "Lectura rápida de ECG de 12 derivaciones, reconocimiento de IAMCEST y arritmias letales.", icon: "fa-wave-square", price: 50000, link: "https://mpago.la/ejemplo8", purchased: false },
-    { id: 9, title: "Rescate y Extricación Vehicular", desc: "Cinemática del trauma, estabilización de vehículos y uso de herramientas hidráulicas.", icon: "fa-car-crash", price: 58000, link: "https://mpago.la/ejemplo9", purchased: false },
-    { id: 10, title: "Emergencias Toxicológicas", desc: "Manejo de sobredosis, antídotos específicos y estabilización inicial del paciente intoxicado.", icon: "fa-skull-crossbones", price: 38000, link: "https://mpago.la/ejemplo10", purchased: false }
+let CoursesDB = [
+    { id: 1, title: "Trauma y Control de Hemorragias", desc: "Protocolos internacionales TCCC/TECC, uso de torniquetes.", icon: "fa-tint", price: 45000, link: "https://mpago.la/ejemplo1", purchased: false },
+    { id: 2, title: "Soporte Vital Básico y DEA", desc: "Reanimación cardiopulmonar de alta calidad según guías 2025.", icon: "fa-heartbeat", price: 35000, link: "https://mpago.la/ejemplo2", purchased: true },
+    { id: 3, title: "Triage y Múltiples Víctimas", desc: "Protocolos START y SALT para incidentes masivos.", icon: "fa-users", price: 42000, link: "https://mpago.la/ejemplo3", purchased: false },
+    { id: 4, title: "Manejo Avanzado de Vía Aérea", desc: "Dispositivos supraglóticos e intubación endotraqueal.", icon: "fa-lungs", price: 55000, link: "https://mpago.la/ejemplo4", purchased: false },
+    { id: 5, title: "Medicina Táctica Operativa", desc: "Atención bajo fuego y extracción táctica.", icon: "fa-shield-alt", price: 65000, link: "https://mpago.la/ejemplo5", purchased: false },
+    { id: 6, title: "Urgencias Pediátricas", desc: "Soporte vital pediátrico y convulsiones.", icon: "fa-child", price: 48000, link: "https://mpago.la/ejemplo6", purchased: false },
+    { id: 7, title: "Farmacología Prehospitalaria", desc: "Cálculo de dosis y vasopresores.", icon: "fa-pills", price: 40000, link: "https://mpago.la/ejemplo7", purchased: false },
+    { id: 8, title: "Electrocardiografía Paramédica", desc: "Lectura rápida de ECG e IAMCEST.", icon: "fa-wave-square", price: 50000, link: "https://mpago.la/ejemplo8", purchased: false },
+    { id: 9, title: "Rescate y Extricación Vehicular", desc: "Cinemática del trauma y estabilización.", icon: "fa-car-crash", price: 58000, link: "https://mpago.la/ejemplo9", purchased: false },
+    { id: 10, title: "Emergencias Toxicológicas", desc: "Manejo de sobredosis y antídotos.", icon: "fa-skull-crossbones", price: 38000, link: "https://mpago.la/ejemplo10", purchased: false }
 ];
 
-// ============================================
-// NÚCLEO DE LA APLICACIÓN
-// ============================================
 const App = {
     state: {
         currentScenarioIndex: 0,
@@ -28,7 +25,19 @@ const App = {
 
     init: function() {
         console.log("⚡ Emergency Academy inicializada.");
+        this.loadCoursesData();
         this.bindEvents();
+    },
+
+    loadCoursesData: function() {
+        const savedCourses = localStorage.getItem('saas_courses_db');
+        if (savedCourses) {
+            CoursesDB = JSON.parse(savedCourses);
+        }
+    },
+
+    saveCoursesData: function() {
+        localStorage.setItem('saas_courses_db', JSON.stringify(CoursesDB));
     },
 
     bindEvents: function() {
@@ -40,7 +49,7 @@ const App = {
         });
     },
 
-    // --- FLUJO DEL SIMULADOR ---
+    // --- SIMULADOR ---
     startSimulation: function() {
         this.state.currentScenarioIndex = 0;
         this.state.score = 0;
@@ -97,7 +106,7 @@ const App = {
         }, 1000);
     },
 
-    checkAnswer: function(isCorrect, timeout = false) {
+    checkAnswer: function(isCorrect) {
         if (this.state.timer) clearInterval(this.state.timer);
         if (isCorrect) this.state.score += 10;
         
@@ -111,7 +120,7 @@ const App = {
         }
     },
 
-    // --- FLUJO DE RESULTADOS ---
+    // --- RESULTADOS ---
     showResults: function() {
         this.hideAllPages();
         document.getElementById('resultsPage').classList.remove('hidden');
@@ -188,12 +197,11 @@ const App = {
         `).join('');
     },
 
-    // Generador dinámico de Manuales de Estudio (PDF)
     downloadCourseMaterial: function(courseTitle) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        doc.setFillColor(30, 58, 138); // Azul institucional
+        doc.setFillColor(30, 58, 138); 
         doc.rect(0, 0, 210, 40, 'F');
         
         doc.setTextColor(255, 255, 255);
@@ -226,14 +234,12 @@ const App = {
     },
 
     simulatePurchase: function(courseId) {
-        // Esta función es solo visual para el prototipo.
-        // Finge que el usuario compró el curso para que al recargar la vista aparezcan los botones de PDF.
         const course = CoursesDB.find(c => c.id === courseId);
         if(course) course.purchased = true;
-        setTimeout(() => this.renderCampusCourses(), 1500); // Recarga la grilla después de 1.5s
+        setTimeout(() => this.renderCampusCourses(), 1500);
     },
 
-    // --- NAVEGACIÓN GENERAL ---
+    // --- NAVEGACIÓN Y PANEL SAAS ---
     hideAllPages: function() {
         if (this.state.timer) clearInterval(this.state.timer);
         ['landingPage', 'simulatorPage', 'resultsPage', 'campusPage', 'saasAdminPanel'].forEach(id => {
@@ -244,16 +250,127 @@ const App = {
     goBackToLanding: function() {
         this.hideAllPages();
         document.getElementById('landingPage').classList.remove('hidden');
-        document.getElementById('aiChatWidget').classList.add('hidden');
     },
 
     showSaaSPanel: function() {
         this.hideAllPages();
         document.getElementById('saasAdminPanel').classList.remove('hidden');
+        document.getElementById('saasAdminPanel').classList.add('flex');
+        this.switchAdminTab('branding'); 
     },
 
     hideSaaSPanel: function() {
+        document.getElementById('saasAdminPanel').classList.remove('flex');
         this.goBackToLanding();
+    },
+
+    switchAdminTab: function(tabName) {
+        document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.add('hidden'));
+        document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('block'));
+        
+        document.querySelectorAll('[id^="tabBtn-"]').forEach(btn => {
+            btn.className = "w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 transition";
+        });
+        
+        document.getElementById(`adminTab-${tabName}`).classList.remove('hidden');
+        document.getElementById(`adminTab-${tabName}`).classList.add('block');
+        
+        const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+        activeBtn.className = "w-full text-left px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold transition shadow-lg border border-blue-500/30";
+
+        if(tabName === 'courses') this.renderAdminCoursesList();
+    },
+
+    // --- GESTIÓN CRUD DE CURSOS ---
+    renderAdminCoursesList: function() {
+        const tbody = document.getElementById('adminCoursesTableList');
+        tbody.innerHTML = CoursesDB.map(course => `
+            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                <td class="p-4">
+                    <div class="font-bold text-slate-800 flex items-center"><i class="fas ${course.icon} text-blue-500 w-6 text-center mr-2"></i> ${course.title}</div>
+                    <div class="text-xs text-slate-400 truncate w-48">${course.desc}</div>
+                </td>
+                <td class="p-4 font-semibold text-emerald-600">
+                    $${course.price.toLocaleString('es-AR')}
+                </td>
+                <td class="p-4">
+                    <a href="${course.link}" target="_blank" class="text-blue-500 hover:underline text-xs break-all"><i class="fas fa-external-link-alt mr-1"></i>Link de Pago</a>
+                </td>
+                <td class="p-4 text-right space-x-2">
+                    <button onclick="App.openCourseModal(${course.id})" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg font-bold transition text-xs">Editar</button>
+                    <button onclick="App.deleteCourse(${course.id})" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg font-bold transition text-xs"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    openCourseModal: function(id = null) {
+        const modalTitle = document.getElementById('modalMainTitle');
+        const isEditing = id !== null;
+        
+        if (isEditing) {
+            const course = CoursesDB.find(c => c.id === id);
+            document.getElementById('modalCourseId').value = course.id;
+            document.getElementById('modalCourseTitle').value = course.title;
+            document.getElementById('modalCourseDesc').value = course.desc;
+            document.getElementById('modalCourseIcon').value = course.icon;
+            document.getElementById('modalCoursePrice').value = course.price;
+            document.getElementById('modalCourseLink').value = course.link;
+            modalTitle.innerHTML = `<i class="fas fa-edit mr-2 text-blue-500"></i>Editar Curso`;
+        } else {
+            document.getElementById('modalCourseId').value = "new";
+            document.getElementById('modalCourseTitle').value = "";
+            document.getElementById('modalCourseDesc').value = "";
+            document.getElementById('modalCourseIcon').value = "fa-book-medical";
+            document.getElementById('modalCoursePrice').value = "";
+            document.getElementById('modalCourseLink').value = "";
+            modalTitle.innerHTML = `<i class="fas fa-plus-circle mr-2 text-emerald-500"></i>Crear Nuevo Curso`;
+        }
+
+        document.getElementById('courseEditModal').classList.remove('hidden');
+        document.getElementById('courseEditModal').classList.add('flex');
+    },
+
+    closeCourseModal: function() {
+        document.getElementById('courseEditModal').classList.remove('flex');
+        document.getElementById('courseEditModal').classList.add('hidden');
+    },
+
+    saveCourseEdits: function() {
+        const idVal = document.getElementById('modalCourseId').value;
+        const newCourse = {
+            title: document.getElementById('modalCourseTitle').value,
+            desc: document.getElementById('modalCourseDesc').value,
+            icon: document.getElementById('modalCourseIcon').value || "fa-book",
+            price: parseInt(document.getElementById('modalCoursePrice').value) || 0,
+            link: document.getElementById('modalCourseLink').value,
+            purchased: false
+        };
+
+        if (idVal === "new") {
+            newCourse.id = Date.now();
+            CoursesDB.unshift(newCourse);
+        } else {
+            const id = parseInt(idVal);
+            const index = CoursesDB.findIndex(c => c.id === id);
+            if(index !== -1) {
+                newCourse.id = id;
+                newCourse.purchased = CoursesDB[index].purchased;
+                CoursesDB[index] = newCourse;
+            }
+        }
+        
+        this.saveCoursesData(); 
+        this.renderAdminCoursesList(); 
+        this.closeCourseModal();
+    },
+
+    deleteCourse: function(id) {
+        if(confirm("¿Estás seguro de eliminar este curso del Campus? Esta acción no se puede deshacer.")) {
+            CoursesDB = CoursesDB.filter(c => c.id !== id);
+            this.saveCoursesData();
+            this.renderAdminCoursesList();
+        }
     }
 };
 
