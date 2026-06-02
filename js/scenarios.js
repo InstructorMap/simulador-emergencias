@@ -1,42 +1,168 @@
+// ==========================================
+// scenarios.js
+// Escenarios clínicos conectados al motor
+// ==========================================
+
 const ScenariosDB = [
-    { 
-        id: 1, 
-        title: "PCR en Centro Comercial", 
-        context: "Varón 58 años, colapso súbito.", 
-        vitals: "Inconsciente, apnea, sin pulso", 
-        timeLimit: 30,
+
+    // ======================================
+    // A — Hemorragia Femoral
+    // ======================================
+    {
+        id: 1,
+
+        scenarioKey:
+            "hemorrhageFemoral",
+
+        title:
+            "Shock Hemorrágico Táctico",
+
+        context:
+            "Herida por arma blanca en muslo con sangrado profuso.",
+
+        vitals:
+            "FC 130, PA 80/50, palidez marcada.",
+
+        timeLimit: 600,
+
+        dynamic: true,
+
         options: [
-            { text: "Iniciar RCP 30:2 y solicitar DEA", correct: true, feedback: "Correcto: Prioridad compresiones y desfibrilador." },
-            { text: "Administrar adrenalina IM", correct: false, feedback: "Error: Adrenalina IM es para anafilaxia." },
-            { text: "Trasladar inmediatamente", correct: false, feedback: "Error: RCP in situ antes del traslado." },
-            { text: "Verificar pulso 30 segundos", correct: false, feedback: "Error: No demorar RCP." }
-        ] 
+
+            {
+                text:
+                    "Aplicar torniquete inmediato",
+
+                action:
+                    "tourniquet_correct",
+
+                priority:
+                    "life-saving"
+            },
+
+            {
+                text:
+                    "Presión directa y esperar",
+
+                action:
+                    "direct_pressure",
+
+                priority:
+                    "secondary"
+            },
+
+            {
+                text:
+                    "Administrar oxígeno",
+
+                action:
+                    "oxygen",
+
+                priority:
+                    "secondary"
+            },
+
+            {
+                text:
+                    "Canalizar vía periférica",
+
+                action:
+                    "iv_access",
+
+                priority:
+                    "secondary"
+            }
+        ]
     },
-    { 
-        id: 2, 
-        title: "Shock Hemorrágico Táctico", 
-        context: "Herida por arma blanca en muslo. Sangrado profuso.", 
-        vitals: "FC 130, PA 80/50, palidez", 
-        timeLimit: 30,
+
+    // ======================================
+    // B — PCR
+    // ======================================
+    {
+        id: 2,
+
+        scenarioKey:
+            "cardiacArrest",
+
+        title:
+            "PCR en Centro Comercial",
+
+        context:
+            "Varón de 58 años, colapso súbito.",
+
+        vitals:
+            "Inconsciente, apnea, sin pulso.",
+
+        timeLimit: 900,
+
+        dynamic: true,
+
         options: [
-            { text: "Aplicar torniquete inmediato", correct: true, feedback: "Correcto: Torniquete salva vidas." },
-            { text: "Presión directa y esperar", correct: false, feedback: "Error: No suficiente para hemorragia arterial." },
-            { text: "Elevar miembro", correct: false, feedback: "Error: Pérdida de tiempo." },
-            { text: "Ácido tranexámico IM", correct: false, feedback: "Error: No detiene sangrado activo." }
-        ] 
+
+            {
+                text:
+                    "Iniciar RCP 30:2",
+
+                action:
+                    "start_cpr",
+
+                priority:
+                    "life-saving"
+            },
+
+            {
+                text:
+                    "Aplicar DEA",
+
+                action:
+                    "apply_aed",
+
+                priority:
+                    "life-saving"
+            },
+
+            {
+                text:
+                    "Desfibrilar",
+
+                action:
+                    "shock",
+
+                priority:
+                    "life-saving"
+            },
+
+            {
+                text:
+                    "Manejo de vía aérea",
+
+                action:
+                    "airway_management",
+
+                priority:
+                    "secondary"
+            }
+        ]
     },
-    { 
-        id: 3, 
-        title: "Triage Múltiples Víctimas", 
-        context: "Accidente autobús. 15 víctimas.", 
-        vitals: "Mujer 30 años, respira, FC 120, obedece órdenes", 
-        timeLimit: 30,
-        options: [
-            { text: "Amarillo (retrasado)", correct: true, feedback: "Correcto: Taquicardia pero estable y obedece." },
-            { text: "Rojo (inmediato)", correct: false, feedback: "Error: No cumple criterios ROJO." },
-            { text: "Verde (leve)", correct: false, feedback: "Error: Taquicardia sugiere amarillo." },
-            { text: "Negro (fallecido)", correct: false, feedback: "Error: Respira." }
-        ] 
-    }
-    // Podés pegar el resto de tus escenarios aquí siguiendo esta misma estructura
-];
+
+    // ======================================
+    // C — Politrauma Táctico
+    // ======================================
+    {
+        id: 3,
+
+        scenarioKey:
+            "tacticalPolytrauma",
+
+        title:
+            "Politrauma Táctico",
+
+        context:
+            "Paciente politraumatizado en entorno hostil.",
+
+        vitals:
+            "FC 132, PA 88/50, Sat 88%.",
+
+        timeLimit: 1200,
+
+        dynamic: true,
