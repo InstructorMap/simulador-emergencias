@@ -2,8 +2,8 @@ const SaaSManager = {
     currentTenant: {
         id: 'tenant_matriz_01',
         name: 'ASARI S.A.S.',
-        registrySeal: 'REMTYO',
-        acronym: 'B.A.R.I.E.C.',
+        registrySeal: 'REMAEP',
+        acronym: 'INST.REGULUS',
         contact: {
             whatsapp: "5491100000000",
             instagram: "https://instagram.com/tu_academia",
@@ -24,24 +24,25 @@ const SaaSManager = {
     },
 
     populateAdminFields: function() {
-        // Llena los campos del panel admin si existen
         setTimeout(() => {
             const sealInput = document.getElementById('registrySealInput');
             const wpInput = document.getElementById('adminWpInput');
             const igInput = document.getElementById('adminIgInput');
             const webInput = document.getElementById('adminWebInput');
             
-            if(sealInput) sealInput.value = this.currentTenant.registrySeal;
-            if(wpInput) wpInput.value = this.currentTenant.contact.whatsapp;
-            if(igInput) igInput.value = this.currentTenant.contact.instagram;
-            if(webInput) webInput.value = this.currentTenant.contact.web;
+            // Blindaje de seguridad: si 'contact' no existe en registros viejos, crea uno vacío temporal
+            const contactInfo = this.currentTenant.contact || { whatsapp: "", instagram: "", web: "" };
+            
+            if(sealInput) sealInput.value = this.currentTenant.registrySeal || "";
+            if(wpInput) wpInput.value = contactInfo.whatsapp || "";
+            if(igInput) igInput.value = contactInfo.instagram || "";
+            if(webInput) webInput.value = contactInfo.web || "";
         }, 100);
     },
 
     saveSettings: function() {
         this.currentTenant.registrySeal = document.getElementById('registrySealInput').value || this.currentTenant.registrySeal;
         
-        // Guardar redes
         this.currentTenant.contact = {
             whatsapp: document.getElementById('adminWpInput').value,
             instagram: document.getElementById('adminIgInput').value,
