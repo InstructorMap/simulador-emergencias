@@ -74,4 +74,4 @@ const ScenariosDB = [
         ]
     }
 ];
-//window.ScenariosDB = ScenariosDB;
+window.ScenariosDB = ScenariosDB;
