@@ -15,7 +15,7 @@ window.App = {
         score: 0,
         timer: null,
         radarInstance: null,
-        patientEngine: null // Almacena el motor fisiológico actual
+        patientEngine: null
     },
 
     init() {
@@ -28,7 +28,6 @@ window.App = {
         }
         console.log("📚 Escenarios cargados:", ScenariosDB.length);
 
-        // Atajo para el Panel SaaS
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
@@ -37,7 +36,6 @@ window.App = {
         });
     },
 
-    // --- GESTIÓN DE CURSOS ---
     loadCoursesData() {
         try {
             const saved = localStorage.getItem("saas_courses_db");
@@ -51,7 +49,6 @@ window.App = {
         localStorage.setItem("saas_courses_db", JSON.stringify(CoursesDB));
     },
 
-    // --- NAVEGACIÓN ---
     hideAllPages() {
         ["landingPage", "simulatorPage", "resultsPage", "campusPage", "saasAdminPanel"].forEach(id => {
             const el = document.getElementById(id);
@@ -65,11 +62,12 @@ window.App = {
         if (landing) landing.classList.remove("hidden");
     },
 
-    // --- SIMULADOR & MOTOR CLÍNICO ---
     startSimulation() {
         console.log("🚑 Iniciando simulador");
-        if (!window.ScenariosDB || !ScenariosDB.length) {
-            alert("No se encontraron escenarios.");
+        
+        // Blindaje anti-caché: Busca la variable global directamente
+        if (typeof ScenariosDB === "undefined" || ScenariosDB.length === 0) {
+            alert("Sincronizando base de datos. Por favor, actualizá la página (F5).");
             return;
         }
 
@@ -92,14 +90,12 @@ window.App = {
 
         if (!scenario || !container) return;
 
-        // Inicializamos el motor fisiológico para este escenario
         let template = window.SimulationConfig ? window.SimulationConfig[scenario.scenarioKey]?.patientTemplate : {};
         this.state.patientEngine = new PatientEngine(template || {});
 
         document.getElementById("currentScenarioIndex").innerText = this.state.currentScenarioIndex + 1;
         const shuffled = [...scenario.options].sort(() => Math.random() - 0.5);
 
-        // Nota: Cambiamos opt.correct por opt.action en el onclick
         container.innerHTML = `
             <div class="bg-slate-800 rounded-2xl p-8 border border-slate-700 text-white slide-in shadow-2xl">
                 <div class="flex justify-between items-start mb-6">
@@ -143,13 +139,12 @@ window.App = {
     checkAnswer(action) {
         clearInterval(this.state.timer);
 
-        // Integración con ClinicalRules
         if (action !== "timeout") {
             const patientState = this.state.patientEngine.getState();
             const feedback = ClinicalRules.evaluateDecision(action, patientState);
             
             if (feedback.correct || feedback.score > 0) {
-                this.state.score += (feedback.score / 10); // Normalizamos el puntaje a escala de 10
+                this.state.score += (feedback.score / 10);
             }
         }
 
@@ -161,7 +156,6 @@ window.App = {
         }
     },
 
-    // --- RESULTADOS ---
     showResults() {
         this.hideAllPages();
         const page = document.getElementById("resultsPage");
@@ -183,7 +177,6 @@ window.App = {
         }
     },
 
-    // --- CAMPUS ---
     showCampus() {
         this.hideAllPages();
         const page = document.getElementById("campusPage");
@@ -215,7 +208,6 @@ window.App = {
         `).join('');
     },
 
-    // --- PANEL ADMINISTRADOR SAAS ---
     showSaaSPanel() {
         this.hideAllPages();
         const panel = document.getElementById('saasAdminPanel');
@@ -342,7 +334,6 @@ window.App = {
     }
 };
 
-// Auto-inicializador seguro
 document.addEventListener('DOMContentLoaded', () => {
     if (window.App) window.App.init();
 });
