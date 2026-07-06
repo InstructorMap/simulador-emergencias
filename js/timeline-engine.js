@@ -1,112 +1,58 @@
-// ==========================================
-// timeline-engine.js
-// Registro cronológico de simulación
-// ==========================================
-
 class TimelineEngine {
-
-    constructor() {
-        this.timeline = [];
+    constructor(onTickCallback, onComplicationCallback) {
+        this.intervalId = null;
+        this.elapsedSeconds = 0;
+        this.onTick = onTickCallback;
+        this.onComplication = onComplicationCallback;
+        this.complicationsTriggered = {};
     }
 
-    // ===============================
-    // Registrar evento
-    // ===============================
-    addEvent(
-        type,
-        action,
-        details = {},
-        patientState = null
-    ) {
+    start(timeLimit) {
+        this.stop();
+        this.elapsedSeconds = 0;
+        this.complicationsTriggered = {};
 
-        const timestamp =
-            patientState?.elapsedTime || 0;
+        this.intervalId = setInterval(() => {
+            this.elapsedSeconds++;
+            
+            // Notificar al sistema para actualizar el organismo del paciente
+            if (this.onTick) this.onTick(1);
 
-        this.timeline.push({
-            timestamp,
-            type,
-            action,
-            details,
+            // Verificar si ocurren complicaciones dinámicas basadas en el tiempo o estado
+            this.checkDynamicEvents();
 
-            patientSnapshot: patientState
-                ? structuredClone(patientState)
-                : null
-        });
+            if (this.elapsedSeconds >= timeLimit) {
+                this.stop();
+                window.App.checkAnswer("timeout");
+            }
+        }, 1000);
     }
 
-    // ===============================
-    // Obtener timeline completo
-    // ===============================
-    getTimeline() {
-        return structuredClone(
-            this.timeline
-        );
+    stop() {
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
     }
 
-    // ===============================
-    // Obtener eventos críticos
-    // ===============================
-    getCriticalEvents() {
+    checkDynamicEvents() {
+        if (!window.App.state.patientEngine) return;
+        const currentPatient = window.App.state.patientEngine.getState();
 
-        return this.timeline.filter(
-            event =>
-                event.type === "critical"
-        );
-    }
-
-    // ===============================
-    // Acciones del estudiante
-    // ===============================
-    getStudentActions() {
-
-        return this.timeline.filter(
-            event =>
-                event.type === "student_action"
-        );
-    }
-
-    // ===============================
-    // Resumen rápido
-    // ===============================
-    getSummary() {
-
-        const actions =
-            this.getStudentActions();
-
-        const critical =
-            this.getCriticalEvents();
-
-        const lastEvent =
-            this.timeline[
-                this.timeline.length - 1
-            ];
-
-        return {
-
-            totalActions:
-                actions.length,
-
-            criticalEvents:
-                critical.length,
-
-            duration:
-                lastEvent?.timestamp || 0,
-
-            patientOutcome:
-                lastEvent?.patientSnapshot
-                    ?.alive
-                    ? "alive"
-                    : "dead"
-        };
-    }
-
-    // ===============================
-    // Reset
-    // ===============================
-    reset() {
-        this.timeline = [];
+        // Evento Dinámico: Si el paciente pasa más de 45 segundos en Shock Clase 3, entra en Paro
+        if (currentPatient.shockLevel >= 3 && !this.complicationsTriggered["cardiac_arrest_shock"]) {
+            if (currentPatient.elapsedTime > 45) {
+                this.complicationsTriggered["cardiac_arrest_shock"] = true;
+                if (this.onComplication) {
+                    this.onComplication({
+                        type: "critical_event",
+                        title: "🛑 Paro Cardiorrespiratorio Secundario",
+                        message: "El paciente ha colapsado hemodinámicamente debido a la hipoperfusión celular severa."
+                    });
+                }
+            }
+        }
     }
 }
 
-window.TimelineEngine =
-    TimelineEngine;
+window.TimelineEngine = TimelineEngine;
