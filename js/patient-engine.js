@@ -1,221 +1,109 @@
-// ==========================================
-// patient-engine.js
-// Motor del estado fisiológico del paciente
-// ==========================================
-
 class PatientEngine {
-    constructor(patientTemplate = {}) {
-        this.defaultState = {
+    constructor(template = {}) {
+        this.initialState = {
             alive: true,
-
-            // Tiempo
             elapsedTime: 0,
-
-            // ABC fisiológico
-            airway: "patent",
-            breathing: 22,
-            spo2: 96,
-
-            circulation: {
-                heartRate: 118,
-                systolicBP: 100,
-                diastolicBP: 65,
-                bleeding: "severe",
-                bleedingControlled: false
-            },
-
-            neuro: {
-                gcs: 15,
-                pain: 8,
-                conscious: true
-            },
-
-            perfusion: "decreased",
-
-            shockLevel: 0,
-
-            interventions: [],
-
-            deteriorationStage: "unstable"
+            volSanguineo: 100, // Porcentaje (100% = 5 Litros)
+            fc: 80,            // Latidos por minuto
+            paSistolica: 120,  // mmHg
+            paDiastolica: 80,  // mmHg
+            fr: 16,            // Respiraciones por minuto
+            spo2: 98,          // Porcentaje
+            temp: 36.5,        // Celsius
+            gcs: 15,           // Escala de Glasgow
+            perfusion: "Normal", // Normal, Disminuida, Crítica
+            dolor: 0,          // Escala 0-10
+            acidosis: 7.4,     // pH sanguíneo
+            hemorragia: "Ninguna", // Ninguna, Moderada, Severa, Controlada
+            shockLevel: 0,     // 0 a 4 (Clases de Shock)
+            hipoxia: false
         };
-
-        this.state = this.mergeState(
-            structuredClone(this.defaultState),
-            patientTemplate
-        );
+        this.state = this.mergeState(structuredClone(this.initialState), template);
     }
 
     mergeState(base, custom) {
-        return {
-            ...base,
-            ...custom,
-            circulation: {
-                ...base.circulation,
-                ...(custom.circulation || {})
-            },
-            neuro: {
-                ...base.neuro,
-                ...(custom.neuro || {})
-            }
-        };
+        return { ...base, ...custom };
     }
 
     getState() {
         return structuredClone(this.state);
     }
 
-    updateTime(seconds = 1) {
-        this.state.elapsedTime += seconds;
-    }
-
-    applyIntervention(intervention) {
-        this.state.interventions.push({
-            action: intervention,
-            timestamp: this.state.elapsedTime
-        });
-
-        switch (intervention) {
-
+    applyProcedure(action) {
+        switch (action) {
             case "tourniquet_correct":
-                this.state.circulation.bleedingControlled = true;
-                this.state.circulation.bleeding = "controlled";
-
-                this.state.shockLevel = Math.max(
-                    0,
-                    this.state.shockLevel - 1
-                );
-                break;
-
-            case "tourniquet_incorrect":
-                this.state.circulation.bleeding = "partial";
-                break;
-
-            case "direct_pressure":
-                if (
-                    this.state.circulation.bleeding === "severe"
-                ) {
-                    this.state.circulation.bleeding = "moderate";
+                if (this.state.hemorragia === "Severa") {
+                    this.state.hemorragia = "Controlada";
+                    this.state.dolor = Math.min(10, this.state.dolor + 2); // El torniquete duele
                 }
                 break;
-
+            case "direct_pressure":
+                if (this.state.hemorragia === "Severa") {
+                    this.state.hemorragia = "Moderada";
+                }
+                break;
             case "oxygen":
-                this.state.spo2 = Math.min(
-                    100,
-                    this.state.spo2 + 2
-                );
+                if (this.state.fr > 0) {
+                    this.state.spo2 = Math.min(100, this.state.spo2 + 5);
+                    this.state.hipoxia = this.state.spo2 < 90;
+                }
                 break;
-
             case "iv_access":
-                // reservado para expansión futura
+                // Habilita la administración de fluidos posterior
+                break;
+            case "start_cpr":
+                if (!this.state.alive) {
+                    // Mantiene perfusión artificial elemental
+                    this.state.spo2 = Math.max(this.state.spo2, 85);
+                }
                 break;
         }
     }
 
-    deteriorate() {
+    nextTick(seconds = 1) {
+        if (!this.state.alive) return this.getState();
 
-        if (!this.state.alive) return;
+        this.state.elapsedTime += seconds;
 
-        const circulation = this.state.circulation;
-
-        // ============================
-        // Hemorragia severa
-        // ============================
-        if (
-            circulation.bleeding === "severe" &&
-            !circulation.bleedingControlled
-        ) {
-
-            circulation.heartRate += 3;
-            circulation.systolicBP -= 2;
-
-            this.state.spo2 -= 0.2;
-
-            if (this.state.elapsedTime > 60) {
-                this.state.shockLevel += 1;
-            }
-
-            if (this.state.elapsedTime > 180) {
-                this.state.neuro.gcs = Math.max(
-                    10,
-                    this.state.neuro.gcs - 1
-                );
-            }
-
-            if (this.state.elapsedTime > 300) {
-                this.state.neuro.conscious = false;
-            }
+        // --- Cascada Fisiológica: Hemorragia Severa no controlada ---
+        if (this.state.hemorragia === "Severa") {
+            this.state.volSanguineo -= 0.15 * seconds; // Pierde volumen rápidamente
+            this.state.fc += 0.8 * seconds;            // Taquicardia compensatoria
+            this.state.paSistolica -= 0.6 * seconds;   // Hipotensión progresiva
+            this.state.paDiastolica -= 0.4 * seconds;
+        } else if (this.state.hemorragia === "Moderada") {
+            this.state.volSanguineo -= 0.05 * seconds;
+            this.state.fc += 0.2 * seconds;
+            this.state.paSistolica -= 0.2 * seconds;
         }
 
-        // ============================
-        // Hemorragia parcial
-        // ============================
-        if (
-            circulation.bleeding === "partial"
-        ) {
-            circulation.heartRate += 1;
-            circulation.systolicBP -= 1;
+        // --- Determinación de Clases de Shock ---
+        if (this.state.volSanguineo < 70) this.state.shockLevel = 4;
+        else if (this.state.volSanguineo < 85) this.state.shockLevel = 3;
+        else if (this.state.volSanguineo < 95) this.state.shockLevel = 2;
+        else this.state.shockLevel = 1;
+
+        // --- Consecuencias en Órganos Diana (Cerebro / Glasgow) ---
+        if (this.state.paSistolica < 80) {
+            this.state.perfusion = "Crítica";
+            this.state.gcs = Math.max(3, this.state.gcs - 1 * seconds);
+        } else if (this.state.paSistolica < 90) {
+            this.state.perfusion = "Disminuida";
+            this.state.gcs = Math.max(3, this.state.gcs - 0.2 * seconds);
         }
 
-        // ============================
-        // Controlada
-        // ============================
-        if (
-            circulation.bleeding === "controlled"
-        ) {
-
-            circulation.heartRate = Math.max(
-                95,
-                circulation.heartRate - 1
-            );
-
-            circulation.systolicBP = Math.min(
-                105,
-                circulation.systolicBP + 1
-            );
-        }
-
-        // ============================
-        // Shock severo
-        // ============================
-        if (
-            circulation.systolicBP < 60
-        ) {
+        // --- Paro Cardiorrespiratorio por Exanguinación o Hipoxia ---
+        if (this.state.paSistolica < 50 || this.state.volSanguineo < 60 || this.state.gcs <= 3) {
             this.state.alive = false;
-            this.state.deteriorationStage = "cardiac_arrest";
+            this.state.fc = 0;
+            this.state.paSistolica = 0;
+            this.state.paDiastolica = 0;
+            this.state.fr = 0;
+            this.state.spo2 = 0;
         }
-
-        // ============================
-        // Estados clínicos
-        // ============================
-        if (
-            circulation.systolicBP < 90
-        ) {
-            this.state.deteriorationStage =
-                "decompensated";
-        }
-
-        if (
-            circulation.systolicBP < 75
-        ) {
-            this.state.deteriorationStage =
-                "critical";
-        }
-    }
-
-    tick(seconds = 1) {
-        this.updateTime(seconds);
-        this.deteriorate();
 
         return this.getState();
     }
-
-    reset(patientTemplate = {}) {
-        this.state = this.mergeState(
-            structuredClone(this.defaultState),
-            patientTemplate
-        );
-    }
 }
 
-// export global
 window.PatientEngine = PatientEngine;
