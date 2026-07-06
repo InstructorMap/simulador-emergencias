@@ -1,52 +1,26 @@
-// ============================================
-// BASE DE DATOS DE CURSOS
-// ============================================
-let CoursesDB = [
-    { id: 1, title: "Trauma y Control de Hemorragias", desc: "Protocolos internacionales TCCC/TECC.", icon: "fa-tint", price: 45000, link: "#", purchased: false },
-    { id: 2, title: "Soporte Vital Básico y DEA", desc: "RCP y desfibrilación.", icon: "fa-heartbeat", price: 35000, link: "#", purchased: true }
-];
-
-// ============================================
-// APP & INTEGRACIÓN DEL MOTOR CLÍNICO
-// ============================================
 window.App = {
     state: {
         currentScenarioIndex: 0,
-        score: 0,
-        timer: null,
-        radarInstance: null,
-        patientEngine: null
+        patientEngine: null,
+        timelineEngine: null,
+        userAnswers: []
     },
 
     init() {
         console.log("✅ Emergency Academy iniciada");
-        this.loadCoursesData();
-
+        
         if (typeof ScenariosDB === "undefined" || typeof PatientEngine === "undefined") {
-            console.error("❌ Faltan cargar los motores clínicos o escenarios.");
+            console.error("❌ Los módulos de escenarios o motores clínicos no se cargaron correctamente.");
             return;
         }
-        console.log("📚 Escenarios cargados:", ScenariosDB.length);
 
+        // Atajo secreto de teclado corporativo para el Panel SaaS (Ctrl + Shift + S)
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
                 this.showSaaSPanel();
             }
         });
-    },
-
-    loadCoursesData() {
-        try {
-            const saved = localStorage.getItem("saas_courses_db");
-            if (saved) CoursesDB = JSON.parse(saved);
-        } catch (err) {
-            console.warn("Error cargando cursos:", err);
-        }
-    },
-
-    saveCoursesData() {
-        localStorage.setItem("saas_courses_db", JSON.stringify(CoursesDB));
     },
 
     hideAllPages() {
@@ -57,283 +31,216 @@ window.App = {
     },
 
     goBackToLanding() {
+        if (this.state.timelineEngine) this.state.timelineEngine.stop();
         this.hideAllPages();
-        const landing = document.getElementById("landingPage");
-        if (landing) landing.classList.remove("hidden");
+        document.getElementById("landingPage").classList.remove("hidden");
     },
 
     startSimulation() {
-        console.log("🚑 Iniciando simulador");
-        
-        // Blindaje anti-caché: Busca la variable global directamente
-        if (typeof ScenariosDB === "undefined" || ScenariosDB.length === 0) {
-            alert("Sincronizando base de datos. Por favor, actualizá la página (F5).");
+        console.log("🚑 Inicializando simulación interactiva");
+        if (!window.ScenariosDB || ScenariosDB.length === 0) {
+            alert("Base de datos de escenarios no encontrada globalmente.");
             return;
         }
 
         this.state.currentScenarioIndex = 0;
-        this.state.score = 0;
-
-        const total = document.getElementById("totalScenarios");
-        if (total) total.innerText = ScenariosDB.length;
-
+        window.EvaluationEngine.reset();
         this.hideAllPages();
-        const simPage = document.getElementById("simulatorPage");
-        if (simPage) simPage.classList.remove("hidden");
-
+        document.getElementById("simulatorPage").classList.remove("hidden");
+        
         this.renderScenario();
     },
 
     renderScenario() {
         const scenario = ScenariosDB[this.state.currentScenarioIndex];
         const container = document.getElementById("scenarioContainer");
-
         if (!scenario || !container) return;
 
-        let template = window.SimulationConfig ? window.SimulationConfig[scenario.scenarioKey]?.patientTemplate : {};
-        this.state.patientEngine = new PatientEngine(template || {});
+        // Inyección dinámica de datos del escenario al motor fisiológico
+        this.state.patientEngine = new PatientEngine(scenario.patientTemplate || {});
+        
+        // Inicializar el bucle temporal en tiempo real
+        this.state.timelineEngine = new TimelineEngine(
+            (tick) => this.onPhysiologicTick(tick),
+            (complication) => this.onDynamicComplication(complication)
+        );
 
         document.getElementById("currentScenarioIndex").innerText = this.state.currentScenarioIndex + 1;
-        const shuffled = [...scenario.options].sort(() => Math.random() - 0.5);
+        document.getElementById("totalScenarios").innerText = ScenariosDB.length;
+
+        this.updateUI(scenario);
+        this.state.timelineEngine.start(scenario.timeLimit);
+    },
+
+    updateUI(scenario) {
+        const container = document.getElementById("scenarioContainer");
+        const patient = this.state.patientEngine.getState();
 
         container.innerHTML = `
-            <div class="bg-slate-800 rounded-2xl p-8 border border-slate-700 text-white slide-in shadow-2xl">
+            <div class="bg-slate-800 rounded-3xl p-8 border border-slate-700 text-white shadow-2xl relative">
                 <div class="flex justify-between items-start mb-6">
-                    <h2 class="text-3xl font-bold">${scenario.title}</h2>
-                    <div class="bg-slate-900 px-4 py-2 rounded-xl border border-slate-700">
-                        <div id="timerDisplay" class="text-2xl text-blue-500 font-bold">${scenario.timeLimit}</div>
+                    <div>
+                        <h2 class="text-3xl font-black">${scenario.title}</h2>
+                        <p class="text-slate-400 mt-1 font-medium"><i class="fas fa-map-marker-alt mr-2"></i>${scenario.context}</p>
+                    </div>
+                    <div class="bg-slate-900 px-6 py-3 rounded-2xl border border-slate-700 text-center shadow-inner">
+                        <div id="timerDisplay" class="text-3xl font-mono font-bold text-blue-500">${scenario.timeLimit - patient.elapsedTime}</div>
+                        <div class="text-[9px] uppercase tracking-widest text-slate-500 font-bold mt-1">Segundos Restantes</div>
                     </div>
                 </div>
-                <div class="bg-blue-900/20 border border-blue-800/30 rounded-xl p-5 mb-6">
-                    <p class="mb-2"><strong class="text-blue-400">Contexto:</strong> ${scenario.context}</p>
-                    <p><strong class="text-blue-400">Signos:</strong> ${scenario.vitals}</p>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700/50">
+                        <div class="text-xs text-slate-400 font-bold uppercase"><i class="fas fa-heartbeat text-red-500 mr-2"></i>Frec. Cardíaca</div>
+                        <div class="text-2xl font-black mt-1 ${patient.fc > 120 || patient.fc === 0 ? 'text-red-500 font-mono animate-pulse' : 'text-emerald-400'}">${Math.round(patient.fc)} <span class="text-xs text-slate-500 font-normal">LPM</span></div>
+                    </div>
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700/50">
+                        <div class="text-xs text-slate-400 font-bold uppercase"><i class="fas fa-compress-alt text-blue-400 mr-2"></i>Presión Art.</div>
+                        <div class="text-2xl font-black mt-1 ${patient.paSistolica < 90 || patient.paSistolica === 0 ? 'text-red-500' : 'text-emerald-400'}">${Math.round(patient.paSistolica)}/${Math.round(patient.paDiastolica)} <span class="text-xs text-slate-500 font-normal">mmHg</span></div>
+                    </div>
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700/50">
+                        <div class="text-xs text-slate-400 font-bold uppercase"><i class="fas fa-lungs text-sky-400 mr-2"></i>Sat. Oxígeno</div>
+                        <div class="text-2xl font-black mt-1 ${patient.spo2 < 90 || patient.spo2 === 0 ? 'text-red-500 font-mono' : 'text-emerald-400'}">${Math.round(patient.spo2)}<span class="text-xs text-slate-500 font-normal">%</span></div>
+                    </div>
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700/50">
+                        <div class="text-xs text-slate-400 font-bold uppercase"><i class="fas fa-brain text-purple-400 mr-2"></i>Glasgow (GCS)</div>
+                        <div class="text-2xl font-black mt-1 ${patient.gcs < 8 ? 'text-red-500 font-bold' : 'text-emerald-400'}">${Math.round(patient.gcs)}/15</div>
+                    </div>
                 </div>
+
+                <div class="bg-slate-900/40 border border-slate-700 rounded-2xl p-5 mb-8">
+                    <p class="text-lg"><strong class="text-blue-400 font-bold">📋 Estado Clínico Actual:</strong> ${scenario.vitals}</p>
+                    <p class="text-sm text-slate-400 mt-2 font-medium">Estado del sangrado: <span class="font-bold uppercase text-white">${patient.hemorragia}</span> | Nivel de Perfusión: <span class="font-bold text-white uppercase">${patient.perfusion}</span></p>
+                </div>
+
                 <div class="space-y-3">
-                    ${shuffled.map(opt => `
-                        <button onclick="App.checkAnswer('${opt.action}')" class="w-full bg-slate-700/50 hover:bg-blue-600/30 transition border border-slate-600 hover:border-blue-500 p-5 rounded-xl text-left text-lg">
-                            ${opt.text}
+                    ${scenario.options.map(opt => `
+                        <button onclick="App.checkAnswer('${opt.action}')" class="w-full text-left p-5 bg-slate-700/40 hover:bg-blue-600/20 rounded-2xl transition border border-slate-600 hover:border-blue-500 text-lg font-medium flex items-center justify-between group">
+                            <span>${opt.text}</span>
+                            <i class="fas fa-chevron-right text-slate-500 group-hover:text-blue-400 transition transform group-hover:translate-x-1"></i>
                         </button>
-                    `).join("")}
+                    `).join('')}
                 </div>
             </div>
         `;
-        this.startTimer(scenario.timeLimit);
     },
 
-    startTimer(seconds) {
-        clearInterval(this.state.timer);
-        let timeLeft = seconds;
-        const display = document.getElementById("timerDisplay");
+    onPhysiologicTick(seconds) {
+        if (!this.state.patientEngine) return;
+        
+        // Avanzar el reloj interno del organismo vivo
+        const patient = this.state.patientEngine.nextTick(seconds);
+        const scenario = ScenariosDB[this.state.currentScenarioIndex];
 
-        this.state.timer = setInterval(() => {
-            timeLeft--;
-            if (display) display.innerText = timeLeft;
-            if (timeLeft <= 5 && display) display.classList.add('timer-warning');
-            if (timeLeft <= 0) {
-                clearInterval(this.state.timer);
-                this.checkAnswer("timeout");
-            }
-        }, 1000);
+        // Actualizar visualmente el temporizador y el monitor clínico
+        const display = document.getElementById("timerDisplay");
+        if (display) display.innerText = scenario.timeLimit - patient.elapsedTime;
+
+        if (!patient.alive) {
+            this.checkAnswer("patient_died");
+            return;
+        }
+
+        // Re-renderizar la UI dinámicamente para actualizar los signos en pantalla
+        this.updateUI(scenario);
+    },
+
+    onDynamicComplication(complication) {
+        alert(`${complication.title}\n\n${complication.message}`);
     },
 
     checkAnswer(action) {
-        clearInterval(this.state.timer);
+        if (this.state.timelineEngine) this.state.timelineEngine.stop();
 
-        if (action !== "timeout") {
-            const patientState = this.state.patientEngine.getState();
+        const patientState = this.state.patientEngine.getState();
+        
+        // Evaluar la decisión clínicamente si no es un fin de juego directo
+        if (action !== "timeout" && action !== "patient_died") {
             const feedback = ClinicalRules.evaluateDecision(action, patientState);
+            window.EvaluationEngine.logDecision(action, patientState, feedback);
             
-            if (feedback.correct || feedback.score > 0) {
-                this.state.score += (feedback.score / 10);
-            }
+            // Aplicar el procedimiento directamente a la fisiología del organismo
+            this.state.patientEngine.applyProcedure(action);
         }
 
         this.state.currentScenarioIndex++;
-        if (this.state.currentScenarioIndex < ScenariosDB.length) {
+        
+        if (this.state.currentScenarioIndex < ScenariosDB.length && patientState.alive && action !== "timeout") {
             this.renderScenario();
         } else {
-            this.showResults();
+            this.showResults(action === "patient_died");
         }
     },
 
-    showResults() {
+    showResults(died = false) {
+        if (this.state.timelineEngine) this.state.timelineEngine.stop();
         this.hideAllPages();
-        const page = document.getElementById("resultsPage");
-        if (page) page.classList.remove("hidden");
+        
+        document.getElementById("resultsPage").classList.remove("hidden");
+        const audit = window.EvaluationEngine.getFinalMetrics();
+        
+        const scoreDisplay = document.getElementById("resultScore");
+        const levelDisplay = document.getElementById("resultLevel");
 
-        const result = document.getElementById("resultScore");
-        if (result) result.innerText = this.state.score + " pts";
-
-        const level = document.getElementById("resultLevel");
-        if (level) {
-            level.innerText = this.state.score >= (ScenariosDB.length * 8) ? "🏆 Alto Criterio" : "⚡ Operador Avanzado";
+        if (died) {
+            if (scoreDisplay) scoreDisplay.innerText = "0 pts (Óbito)";
+            if (levelDisplay) levelDisplay.innerText = "💀 Óbito del Paciente";
+        } else {
+            if (scoreDisplay) scoreDisplay.innerText = `${audit.promedioGral} pts`;
+            if (levelDisplay) levelDisplay.innerText = audit.promedioGral >= 80 ? "🏆 Alto Criterio Clínico" : "⚡ Operador en Desarrollo";
         }
+
+        this.renderCompetencyChart(audit.competencias);
     },
 
-    downloadCertificate() {
-        const studentName = prompt("Ingresá tu nombre completo para el diploma:") || "Operador Clínico";
-        if (window.CertificateGenerator) {
-            CertificateGenerator.generate(studentName, this.state.score);
-        }
+    renderCompetencyChart(competencias) {
+        const ctx = document.getElementById("radarChart");
+        if (!ctx) return;
+
+        if (this.state.radarInstance) this.state.radarInstance.destroy();
+        this.state.radarInstance = new Chart(ctx.getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: ['M - Hemorragias', 'A - Vía Aérea', 'R - Respiración', 'C/H - Soporte'],
+                datasets: [{
+                    label: 'Criterio Operativo',
+                    data: [competencias.MARCH_M || 50, competencias.MARCH_A || 40, 60, competencias.General || 50],
+                    backgroundColor: 'rgba(37, 99, 235, 0.3)',
+                    borderColor: '#3b82f6',
+                    pointBackgroundColor: '#fff'
+                }]
+            },
+            options: { scales: { r: { beginAtZero: true, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+        });
     },
 
     showCampus() {
         this.hideAllPages();
-        const page = document.getElementById("campusPage");
-        if (page) {
-            page.classList.remove("hidden");
-            this.renderCampusCourses();
-        }
-    },
-
-    renderCampusCourses() {
-        const grid = document.getElementById('coursesGrid');
-        if (!grid) return;
-        grid.innerHTML = CoursesDB.map(course => `
-            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 flex flex-col">
-                <div class="bg-blue-600 h-36 flex items-center justify-center text-white relative rounded-t-2xl">
-                    <i class="fas ${course.icon} text-6xl opacity-90"></i>
-                    <div class="absolute top-3 right-3 bg-slate-900/80 text-white text-xs font-bold px-3 py-1 rounded-lg">$${course.price.toLocaleString('es-AR')}</div>
-                </div>
-                <div class="p-6 flex-1 flex flex-col">
-                    <h3 class="text-lg font-bold text-slate-800 mb-2">${course.title}</h3>
-                    <p class="text-slate-500 text-sm mb-6 flex-1">${course.desc}</p>
-                    ${course.purchased ? `
-                        <button class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition"><i class="fas fa-file-pdf mr-2"></i>Descargar Manual</button>
-                    ` : `
-                        <a href="${course.link}" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-center transition"><i class="fas fa-shopping-cart mr-2"></i>Comprar</a>
-                    `}
-                </div>
-            </div>
-        `).join('');
+        document.getElementById("campusPage").classList.remove("hidden");
     },
 
     showSaaSPanel() {
         this.hideAllPages();
-        const panel = document.getElementById('saasAdminPanel');
+        const panel = document.getElementById("saasAdminPanel");
         if (panel) {
-            panel.classList.remove('hidden');
-            panel.classList.add('flex');
-            this.switchAdminTab('branding');
+            panel.classList.remove("hidden");
+            panel.classList.add("flex");
         }
     },
 
     hideSaaSPanel() {
-        const panel = document.getElementById('saasAdminPanel');
-        if (panel) panel.classList.remove('flex');
         this.goBackToLanding();
     },
 
-    switchAdminTab(tabName) {
-        document.querySelectorAll('.admin-tab').forEach(tab => {
-            tab.classList.add('hidden');
-            tab.classList.remove('block');
-        });
-        document.querySelectorAll('[id^="tabBtn-"]').forEach(btn => {
-            btn.className = "w-full text-left px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 transition";
-        });
-        
-        const targetTab = document.getElementById(`adminTab-${tabName}`);
-        const activeBtn = document.getElementById(`tabBtn-${tabName}`);
-        
-        if (targetTab) {
-            targetTab.classList.remove('hidden');
-            targetTab.classList.add('block');
-        }
-        if (activeBtn) {
-            activeBtn.className = "w-full text-left px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold transition border border-blue-500/30";
-        }
-
-        if(tabName === 'courses') this.renderAdminCoursesList();
-    },
-
-    renderAdminCoursesList() {
-        const tbody = document.getElementById('adminCoursesTableList');
-        if (!tbody) return;
-        tbody.innerHTML = CoursesDB.map(course => `
-            <tr class="hover:bg-slate-50 border-b border-slate-100">
-                <td class="p-4">
-                    <div class="font-bold text-slate-800"><i class="fas ${course.icon} text-blue-500 w-6"></i> ${course.title}</div>
-                </td>
-                <td class="p-4 font-semibold text-emerald-600">$${course.price.toLocaleString('es-AR')}</td>
-                <td class="p-4 text-right">
-                    <button onclick="App.openCourseModal(${course.id})" class="bg-blue-50 text-blue-600 px-3 py-2 rounded-lg font-bold text-xs mr-2">Editar</button>
-                    <button onclick="App.deleteCourse(${course.id})" class="bg-red-50 text-red-600 px-3 py-2 rounded-lg font-bold text-xs"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
-    },
-
-    openCourseModal(id = null) {
-        const modalTitle = document.getElementById('modalMainTitle');
-        if (id !== null) {
-            const course = CoursesDB.find(c => c.id === id);
-            document.getElementById('modalCourseId').value = course.id;
-            document.getElementById('modalCourseTitle').value = course.title;
-            document.getElementById('modalCourseDesc').value = course.desc;
-            document.getElementById('modalCourseIcon').value = course.icon;
-            document.getElementById('modalCoursePrice').value = course.price;
-            document.getElementById('modalCourseLink').value = course.link;
-            if(modalTitle) modalTitle.innerHTML = `<i class="fas fa-edit mr-2 text-blue-500"></i>Editar Curso`;
-        } else {
-            document.getElementById('modalCourseId').value = "new";
-            document.getElementById('modalCourseTitle').value = "";
-            document.getElementById('modalCourseDesc').value = "";
-            document.getElementById('modalCourseIcon').value = "fa-book-medical";
-            document.getElementById('modalCoursePrice').value = "";
-            document.getElementById('modalCourseLink').value = "";
-            if(modalTitle) modalTitle.innerHTML = `<i class="fas fa-plus-circle mr-2 text-emerald-500"></i>Crear Curso`;
-        }
-        document.getElementById('courseEditModal').classList.remove('hidden');
-        document.getElementById('courseEditModal').classList.add('flex');
-    },
-
-    closeCourseModal() {
-        const modal = document.getElementById('courseEditModal');
-        if (modal) {
-            modal.classList.remove('flex');
-            modal.classList.add('hidden');
-        }
-    },
-
-    saveCourseEdits() {
-        const idVal = document.getElementById('modalCourseId').value;
-        const newCourse = {
-            title: document.getElementById('modalCourseTitle').value,
-            desc: document.getElementById('modalCourseDesc').value,
-            icon: document.getElementById('modalCourseIcon').value || "fa-book",
-            price: parseInt(document.getElementById('modalCoursePrice').value) || 0,
-            link: document.getElementById('modalCourseLink').value,
-            purchased: false
-        };
-
-        if (idVal === "new") {
-            newCourse.id = Date.now();
-            CoursesDB.unshift(newCourse);
-        } else {
-            const id = parseInt(idVal);
-            const index = CoursesDB.findIndex(c => c.id === id);
-            if(index !== -1) {
-                newCourse.id = id;
-                newCourse.purchased = CoursesDB[index].purchased;
-                CoursesDB[index] = newCourse;
-            }
-        }
-        
-        this.saveCoursesData(); 
-        this.renderAdminCoursesList(); 
-        this.closeCourseModal();
-    },
-
-    deleteCourse(id) {
-        if(confirm("¿Eliminar este curso?")) {
-            CoursesDB = CoursesDB.filter(c => c.id !== id);
-            this.saveCoursesData();
-            this.renderAdminCoursesList();
+    downloadCertificate() {
+        const name = prompt("Nombre completo del profesional:") || "Operador Clínico";
+        const audit = window.EvaluationEngine.getFinalMetrics();
+        if (window.CertificateGenerator) {
+            CertificateGenerator.generate(name, audit.promedioGral);
         }
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.App) window.App.init();
+document.addEventListener("DOMContentLoaded", () => {
+    window.App.init();
 });
