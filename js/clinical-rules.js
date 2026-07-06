@@ -1,188 +1,90 @@
-// ==========================================
-// clinical-rules.js
-// Reglas clínicas reutilizables
-// ==========================================
-
-class ClinicalRules {
-
-    static evaluate(patientState) {
-
-        const events = [];
-
-        const circulation =
-            patientState.circulation;
-
-        const neuro =
-            patientState.neuro;
-
-        // ==================================
-        // Shock hemorrágico
-        // ==================================
-        if (
-            circulation.bleeding === "severe" &&
-            !circulation.bleedingControlled
-        ) {
-
-            if (
-                patientState.elapsedTime > 60 &&
-                patientState.elapsedTime < 180
-            ) {
-                events.push({
-                    type: "warning",
-                    message:
-                        "Paciente muestra signos tempranos de shock hemorrágico."
-                });
-            }
-
-            if (
-                patientState.elapsedTime >= 180 &&
-                neuro.gcs <= 14
-            ) {
-                events.push({
-                    type: "critical",
-                    message:
-                        "Deterioro neurológico progresivo."
-                });
-            }
-
-            if (
-                patientState.elapsedTime >= 300 &&
-                !neuro.conscious
-            ) {
-                events.push({
-                    type: "critical",
-                    message:
-                        "Pérdida de conciencia por hipoperfusión."
-                });
-            }
-        }
-
-        // ==================================
-        // Estado crítico
-        // ==================================
-        if (
-            circulation.systolicBP < 75
-        ) {
-            events.push({
-                type: "critical",
-                message:
-                    "Paciente en estado crítico."
-            });
-        }
-
-        // ==================================
-        // Colapso hemodinámico
-        // ==================================
-        if (
-            circulation.systolicBP < 60
-        ) {
-            events.push({
-                type: "fatal",
-                message:
-                    "Colapso hemodinámico inminente."
-            });
-        }
-
-        // ==================================
-        // Paciente estabilizado
-        // ==================================
-        if (
-            circulation.bleedingControlled &&
-            circulation.systolicBP >= 90 &&
-            circulation.heartRate <= 110
-        ) {
-
-            events.push({
-                type: "success",
-                message:
-                    "Paciente parcialmente estabilizado."
-            });
-        }
-
-        return events;
-    }
-
-    // ======================================
-    // Evaluación de decisiones clínicas
-    // ======================================
-    static evaluateDecision(
-        action,
-        patientState
-    ) {
-
-        const feedback = {
+const ClinicalRules = {
+    evaluateDecision(action, patientState) {
+        const report = {
             correct: false,
-            priority: "secondary",
             score: 0,
+            priorityApplied: "Ninguna",
             reasoning: ""
         };
 
-        switch (action) {
-
-            case "tourniquet_correct":
-
-                if (
-                    patientState.circulation
-                        .bleeding === "severe"
-                ) {
-                    feedback.correct = true;
-                    feedback.priority =
-                        "life-saving";
-
-                    feedback.score = 100;
-
-                    feedback.reasoning =
-                        "La hemorragia masiva era la amenaza inmediata.";
-                }
-
-                break;
-
-            case "tourniquet_incorrect":
-
-                feedback.correct = false;
-
-                feedback.score = 25;
-
-                feedback.reasoning =
-                    "El control hemorrágico fue inefectivo.";
-
-                break;
-
-            case "oxygen":
-
-                feedback.correct = true;
-
-                feedback.priority =
-                    "secondary";
-
-                feedback.score = 20;
-
-                feedback.reasoning =
-                    "El oxígeno puede ayudar, pero no resuelve la amenaza letal principal.";
-
-                break;
-
-            case "iv_access":
-
-                feedback.correct = true;
-
-                feedback.priority =
-                    "secondary";
-
-                feedback.score = 10;
-
-                feedback.reasoning =
-                    "La canalización es útil, pero secundaria frente al sangrado masivo.";
-
-                break;
-
-            default:
-                feedback.reasoning =
-                    "Intervención sin evaluación clínica definida.";
+        // Regla de Oro MARCH: M (Hemorragia Masiva) precede a todo.
+        if (patientState.hemorragia === "Severa") {
+            if (action === "tourniquet_correct") {
+                report.correct = true;
+                report.score = 100;
+                report.priorityApplied = "M - Hemorragia Masiva";
+                report.reasoning = "Excelente. El control inmediato de hemorragias exanguinantes en extremidades mediante torniquete es la prioridad número uno del protocolo TCCC.";
+            } else if (action === "oxygen" || action === "airway_management") {
+                report.correct = false;
+                report.score = 10;
+                report.priorityApplied = "A/B - Vía Aérea e Hipoxia";
+                report.reasoning = "Error Crítico de Priorización. Intentar resolver la vía aérea u oxigenar a un paciente que se está desangrando de forma masiva causa la muerte por shock hipovolémico irreversible.";
+            } else {
+                report.correct = false;
+                report.score = 20;
+                report.reasoning = "Acción secundaria no prioritaria mientras exista un sangrado masivo activo.";
+            }
+        } 
+        
+        // Regla para Paro Cardiorrespiratorio
+        else if (!patientState.alive) {
+            if (action === "start_cpr" || action === "apply_aed") {
+                report.correct = true;
+                report.score = 90;
+                report.priorityApplied = "C - Circulación Avanzada";
+                report.reasoning = "Correcto. El inicio temprano de maniobras de reanimación cardiopulmonar e integración del DEA es mandatorio ante el colapso de ritmos.";
+            } else {
+                report.correct = false;
+                report.score = 0;
+                report.reasoning = "Pérdida de tiempo crítico. El paciente se encuentra en paro cardiorrespiratorio, requiere soporte vital básico inmediato.";
+            }
         }
 
-        return feedback;
+        return report;
+    }
+};
+
+class EvaluationEngine {
+    constructor() {
+        this.historyLog = [];
+    }
+
+    logDecision(action, patientBefore, outcome) {
+        this.historyLog.push({
+            timestamp: patientBefore.elapsedTime,
+            action: action,
+            fisiologia: patientBefore,
+            evaluacion: outcome
+        });
+    }
+
+    getFinalMetrics() {
+        let totalScore = 0;
+        let erroresCriticos = 0;
+        let categorias = { MARCH_M: 0, MARCH_A: 0, MARCH_R: 0, General: 0 };
+
+        this.historyLog.forEach(log => {
+            totalScore += log.evaluacion.score;
+            if (log.evaluacion.score <= 10) erroresCriticos++;
+            
+            if (log.evaluacion.priorityApplied.includes("Hemorragia")) categorias.MARCH_M += log.evaluacion.score;
+            else if (log.evaluacion.priorityApplied.includes("Vía Aérea")) categorias.MARCH_A += log.evaluacion.score;
+            else categorias.General += log.evaluacion.score;
+        });
+
+        const totalActions = this.historyLog.length || 1;
+        return {
+            promedioGral: Math.round(totalScore / totalActions),
+            erroresCriticos,
+            logCompleto: this.historyLog,
+            competencias: categorias
+        };
+    }
+
+    reset() {
+        this.historyLog = [];
     }
 }
 
 window.ClinicalRules = ClinicalRules;
+window.EvaluationEngine = new EvaluationEngine();
