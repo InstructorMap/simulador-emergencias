@@ -7,6 +7,15 @@ const ClinicalRules = {
             reasoning: ""
         };
 
+        // Regla para acciones no reconocidas o inútiles (El alumno escribió algo incorrecto)
+        if (action === "ineffective_action") {
+            report.correct = false;
+            report.score = 0;
+            report.priorityApplied = "Error / Inacción";
+            report.reasoning = "Acción ineficaz o procedimiento no reconocido. Se consumió tiempo operativo crítico sin generar beneficio fisiológico en el paciente.";
+            return report;
+        }
+
         // Regla de Oro MARCH: M (Hemorragia Masiva) precede a todo.
         if (patientState.hemorragia === "Severa") {
             if (action === "tourniquet_correct") {
@@ -44,47 +53,4 @@ const ClinicalRules = {
     }
 };
 
-class EvaluationEngine {
-    constructor() {
-        this.historyLog = [];
-    }
-
-    logDecision(action, patientBefore, outcome) {
-        this.historyLog.push({
-            timestamp: patientBefore.elapsedTime,
-            action: action,
-            fisiologia: patientBefore,
-            evaluacion: outcome
-        });
-    }
-
-    getFinalMetrics() {
-        let totalScore = 0;
-        let erroresCriticos = 0;
-        let categorias = { MARCH_M: 0, MARCH_A: 0, MARCH_R: 0, General: 0 };
-
-        this.historyLog.forEach(log => {
-            totalScore += log.evaluacion.score;
-            if (log.evaluacion.score <= 10) erroresCriticos++;
-            
-            if (log.evaluacion.priorityApplied.includes("Hemorragia")) categorias.MARCH_M += log.evaluacion.score;
-            else if (log.evaluacion.priorityApplied.includes("Vía Aérea")) categorias.MARCH_A += log.evaluacion.score;
-            else categorias.General += log.evaluacion.score;
-        });
-
-        const totalActions = this.historyLog.length || 1;
-        return {
-            promedioGral: Math.round(totalScore / totalActions),
-            erroresCriticos,
-            logCompleto: this.historyLog,
-            competencias: categorias
-        };
-    }
-
-    reset() {
-        this.historyLog = [];
-    }
-}
-
 window.ClinicalRules = ClinicalRules;
-window.EvaluationEngine = new EvaluationEngine();
