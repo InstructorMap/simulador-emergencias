@@ -1,10 +1,29 @@
 // ====================================================================
-// app.js - ORQUESTADOR DEL SIMULADOR CLÍNICO V2 (FLIGHT-SIM MODE)
+// app.js - ORQUESTADOR COMPLETO DEL SIMULADOR CLÍNICO V2 (FLIGHT-SIM MODE)
 // ====================================================================
 
+// Base de datos dinámica del Campus (Preparada para expansión por IA y Video)
 let CoursesDB = [
-    { id: 1, title: "Trauma y Control de Hemorragias", desc: "Protocolos internacionales TCCC/TECC avanzados.", icon: "fa-tint", price: 45000, link: "#", purchased: false },
-    { id: 2, title: "Soporte Vital Básico y DEA", desc: "Reanimación cardiopulmonar de alta calidad.", icon: "fa-heartbeat", price: 35000, link: "#", purchased: true }
+    { 
+        id: 1, 
+        title: "Trauma y Control de Hemorragias", 
+        desc: "Protocolos internacionales TCCC/TECC avanzados. Uso de agentes hemostáticos y torniquetes mecánicos.", 
+        icon: "fa-tint", 
+        price: 45000, 
+        link: "https://mpago.la/ejemplo1", 
+        purchased: false,
+        videoId: "dQw4w9WgXcQ" // ID del video de YouTube educativo asignado al curso
+    },
+    { 
+        id: 2, 
+        title: "Soporte Vital Básico y DEA", 
+        desc: "Reanimación cardiopulmonar de alta calidad según directrices de consenso prehospitalario 2025.", 
+        icon: "fa-heartbeat", 
+        price: 35000, 
+        link: "https://mpago.la/ejemplo2", 
+        purchased: true, // Inicia comprado para demostración de descarga de material
+        videoId: "dQw4w9WgXcQ"
+    }
 ];
 
 window.App = {
@@ -15,15 +34,17 @@ window.App = {
     },
 
     init() {
-        console.log("✅ Emergency Academy V2 Iniciada");
+        console.log("✅ Emergency Academy V2 - Terminal de Órdenes Iniciada.");
         this.loadCoursesData();
 
-        if (typeof ScenariosDB === "undefined" || typeof PatientEngine === "undefined" || typeof EvaluationEngine === "undefined") {
-            console.error("❌ Error de Arquitectura: Faltan cargar los motores modulares de Javascript.");
+        // Verificación de integridad estructural de los 9 motores modulares
+        if (typeof ScenariosDB === "undefined" || typeof PatientEngine === "undefined" || typeof EvaluationEngine === "undefined" || typeof ClinicalRules === "undefined") {
+            console.error("❌ Error de Arquitectura Crítico: Faltan cargar motores JavaScript independientes en index.html.");
             return;
         }
+        console.log("📚 Catálogo de Casos Clínicos en Memoria Global:", ScenariosDB.length);
 
-        // Acceso Corporativo al Panel SaaS Administrativo (Ctrl + Shift + S)
+        // Atajo de comandos de administración Marca Blanca (Ctrl + Shift + S)
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
@@ -32,12 +53,13 @@ window.App = {
         });
     },
 
+    // --- MANEJO DE CACHÉ Y PERSISTENCIA LOCAL DE PRODUCTOS ---
     loadCoursesData() {
         try {
             const saved = localStorage.getItem("saas_courses_db");
             if (saved) CoursesDB = JSON.parse(saved);
         } catch (err) {
-            console.warn("Error cargando base de datos local de cursos:", err);
+            console.warn("Advertencia al sincronizar cursos de caché local:", err);
         }
     },
 
@@ -45,6 +67,7 @@ window.App = {
         localStorage.setItem("saas_courses_db", JSON.stringify(CoursesDB));
     },
 
+    // --- SISTEMA DE NAVEGACIÓN SINGLE-PAGE APPLICATION (SPA) ---
     hideAllPages() {
         ["landingPage", "simulatorPage", "resultsPage", "campusPage", "saasAdminPanel"].forEach(id => {
             const el = document.getElementById(id);
@@ -58,8 +81,15 @@ window.App = {
         document.getElementById("landingPage").classList.remove("hidden");
     },
 
+    // --- CONTROLADOR CENTRAL DE LA SIMULACIÓN ---
     startSimulation() {
-        console.log("🚑 Inicializando entorno fisiológico vivo");
+        console.log("🚑 Inicializando entorno operativo vivo...");
+        
+        if (typeof ScenariosDB === "undefined" || ScenariosDB.length === 0) {
+            alert("Error: Base de datos clínica global inaccesible.");
+            return;
+        }
+
         this.state.currentScenarioIndex = 0;
         window.EvaluationEngine.reset();
         this.hideAllPages();
@@ -69,13 +99,13 @@ window.App = {
     },
 
     initScenarioInstance() {
-        const scenario = ScenariosDB[this.state.state?.currentScenarioIndex || this.state.currentScenarioIndex];
+        const scenario = ScenariosDB[this.state.currentScenarioIndex];
         if (!scenario) return;
 
-        // Instanciar un organismo vivo con los parámetros del caso clínico actual
+        // Inyectar la plantilla anatómica en el motor fisiológico autónomo
         this.state.patientEngine = new PatientEngine(scenario.patientTemplate || {});
         
-        // Arrancar el reloj de simulación asíncrona por segundo
+        // Vincular los pulsos de tiempo asíncronos con el refresco de variables en pantalla
         this.state.timelineEngine = new TimelineEngine(
             (tick) => this.onPhysiologicTick(tick),
             (complication) => this.onDynamicComplication(complication)
@@ -95,7 +125,7 @@ window.App = {
 
         const patient = this.state.patientEngine.getState();
 
-        // Actualizar dinámicamente el panel clínico interactivo
+        // Renderizado del monitor paramétrico de alta gama y la terminal médica abierta
         container.innerHTML = `
             <div class="bg-slate-800 rounded-3xl p-8 border border-slate-700 text-white shadow-2xl relative">
                 <div class="flex justify-between items-start mb-6">
@@ -133,76 +163,111 @@ window.App = {
                     <div class="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-slate-700/50 text-xs text-slate-400 font-medium">
                         <div>Estado de Sangrado: <span class="text-white font-bold uppercase ml-1">${patient.hemorragia}</span></div>
                         <div>Perfusión Tisular: <span class="text-white font-bold uppercase ml-1">${patient.perfusion}</span></div>
-                        <div>Nivel Volumétrico: <span class="text-white font-bold uppercase ml-1">${Math.round(patient.volSanguineo)}%</span></div>
-                        <div>Estatus del Shock: <span class="text-white font-bold uppercase ml-1">Clase ${patient.shockLevel}</span></div>
+                        <div>Nivel Volumétrico Sanguíneo: <span class="text-white font-bold uppercase ml-1">${Math.round(patient.volSanguineo)}%</span></div>
+                        <div>Estatus Clínico del Shock: <span class="text-white font-bold uppercase ml-1">Clase ${patient.shockLevel}</span></div>
                     </div>
                 </div>
 
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Procedimientos y Acciones Clínicas Disponibles</h3>
-                <div class="grid sm:grid-cols-2 gap-3">
-                    ${scenario.allowedActions.map(opt => `
-                        <button onclick="App.processClinicalAction('${opt.action}')" class="w-full text-left p-4 bg-slate-700/30 hover:bg-blue-600/20 rounded-xl transition border border-slate-600/70 hover:border-blue-500/80 text-sm font-semibold flex items-center justify-between group">
-                            <span>${opt.text}</span>
-                            <i class="fas fa-bolt text-slate-500 group-hover:text-blue-400 transition transform group-hover:scale-110"></i>
+                <div class="bg-slate-900/80 p-6 rounded-2xl border border-slate-600 shadow-inner">
+                    <label class="text-sm font-bold text-blue-400 uppercase tracking-widest flex items-center mb-3">
+                        <i class="fas fa-terminal mr-2"></i> Terminal de Órdenes Abiertas y Argumentación de Criterio
+                    </label>
+                    <textarea id="clinicalCommandInput" rows="3" class="w-full bg-slate-950 text-slate-200 text-lg rounded-xl p-4 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition font-medium" placeholder="Escribí detalladamente tu orden y justificación clínica... (Ej: Coloco un torniquete proximal porque priorizo el control de la hemorragia femoral exanguinante)"></textarea>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 mt-4">
+                        <button onclick="App.submitClinicalCommand()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition shadow-lg text-lg flex items-center justify-center">
+                            <i class="fas fa-play mr-2"></i> Prescribir / Ejecutar Orden
                         </button>
-                    `).join('')}
+                        <button onclick="App.processClinicalAction('transport_patient', 'Evacuación táctico-médica por decisión del operador profesional.')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg flex items-center justify-center">
+                            <i class="fas fa-ambulance mr-2"></i> Evacuar Destino
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
     },
 
+    submitClinicalCommand() {
+        const inputField = document.getElementById("clinicalCommandInput");
+        if (!inputField) return;
+
+        const rawText = inputField.value.trim().toLowerCase();
+        if (!rawText || rawText.length < 8) {
+            alert("Falta Criterio: Escribí un procedimiento claro y fundamentá tu decisión clínica en la terminal antes de enviarla.");
+            return;
+        }
+
+        let action = "unrecognized";
+
+        // Parser Clínico Semántico de Palabras Clave (Procesamiento Lingüístico de Marca Blanca)
+        if (rawText.includes("torniquete") || rawText.includes("tq") || rawText.includes("tourniquet") || rawText.includes("empaquetamiento") || rawText.includes("hemostatico")) {
+            action = "tourniquet_correct";
+        } else if (rawText.includes("presion directa") || rawText.includes("presión directa") || rawText.includes("comprimir")) {
+            action = "direct_pressure";
+        } else if (rawText.includes("oxigeno") || rawText.includes("oxígeno") || rawText.includes("o2") || rawText.includes("mascara") || rawText.includes("mascarilla")) {
+            action = "oxygen";
+        } else if (rawText.includes("rcp") || rawText.includes("compresiones") || rawText.includes("masaje")) {
+            action = "start_cpr";
+        } else if (rawText.includes("dea") || rawText.includes("desfibrilar") || rawText.includes("parches") || rawText.includes("choque")) {
+            action = "apply_aed";
+        } else if (rawText.includes("via aerea") || rawText.includes("vía aérea") || rawText.includes("canula") || rawText.includes("mayo") || rawText.includes("intubar") || rawText.includes("tubo")) {
+            action = "airway_management";
+        } else if (rawText.includes("via") || rawText.includes("vía") || rawText.includes("suero") || rawText.includes("fluidos") || rawText.includes("canalizar") || rawText.includes("periferica")) {
+            action = "iv_access";
+        }
+
+        if (action === "unrecognized") {
+            alert("⚠️ Alerta de Ejecución: El comando prescrito no coincide con un procedimiento ejecutable en el inventario prehospitalario actual o la justificación es indescifrable.");
+            return;
+        }
+
+        // Ejecutar el procedimiento médico enviando el argumento del alumno para auditoría del PDF
+        this.processClinicalAction(action, inputField.value.trim());
+    },
+
+    processClinicalAction(action, argumentText = "") {
+        const patientState = this.state.patientEngine.getState();
+
+        if (action === "transport_patient") {
+            this.terminateSimulationLoop("evacuated");
+            return;
+        }
+
+        // Evaluar en el motor clínico y registrar en el libro auditor
+        const feedback = ClinicalRules.evaluateDecision(action, patientState);
+        window.EvaluationEngine.logDecision(action, patientState, feedback, argumentText);
+        
+        // Impactar mecánicamente las variables fisiológicas del paciente
+        this.state.patientEngine.applyProcedure(action);
+
+        // Penalización Temporal Automática: Cada procedimiento consume 15 segundos metabólicos
+        this.state.patientEngine.nextTick(15);
+        this.renderActiveDashboard();
+    },
+
     onPhysiologicTick(seconds) {
         if (!this.state.patientEngine) return;
 
-        // Avanzar el reloj metabólico del paciente vivo
         const patient = this.state.patientEngine.nextTick(seconds);
         const scenario = ScenariosDB[this.state.currentScenarioIndex];
 
         const display = document.getElementById("timerDisplay");
         if (display) display.innerText = scenario.timeLimit - patient.elapsedTime;
 
-        // Si las variables caen a umbrales incompatibles con la vida, colapsa
         if (!patient.alive) {
             this.terminateSimulationLoop("patient_died");
             return;
         }
 
-        // Refrescar los monitores multiparamétricos en pantalla sin reiniciar la instancia
         this.renderActiveDashboard();
     },
 
     onDynamicComplication(complication) {
-        // Alerta flotante ante eventos clínicos intempestivos
         const banner = document.createElement("div");
-        banner.className = "fixed top-5 left-1/2 transform -translate-x-1/2 bg-red-600 text-white font-bold px-6 py-4 rounded-2xl shadow-2xl z-50 animate-bounce text-center max-w-md border border-red-400";
+        banner.className = "fixed top-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white font-bold px-6 py-4 rounded-2xl shadow-2xl z-50 text-center max-w-md border border-red-400 border-2";
         banner.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i><strong>${complication.title}</strong><br><span class="text-xs font-normal opacity-90">${complication.message}</span>`;
         document.body.appendChild(banner);
         setTimeout(() => banner.remove(), 4000);
-    },
-
-    processClinicalAction(action) {
-        const patientState = this.state.patientEngine.getState();
-
-        // 1. Si el usuario decide evacuar, termina el bucle clínico de este paciente con éxito
-        if (action === "transport_patient") {
-            this.terminateSimulationLoop("evacuated");
-            return;
-        }
-
-        // 2. Si es una acción terapéutica ordinaria, auditar en el motor de reglas clínicas
-        if (action !== "wait_tick") {
-            const feedback = ClinicalRules.evaluateDecision(action, patientState);
-            window.EvaluationEngine.logDecision(action, patientState, feedback);
-            
-            // 3. Impactar el procedimiento quirúrgico o clínico directamente en la fisiología viva
-            this.state.patientEngine.applyProcedure(action);
-        }
-
-        // Forzar un salto temporal de 10 segundos para simular el tiempo que toma realizar el procedimiento
-        this.state.patientEngine.nextTick(10);
-
-        // Refrescar el monitor clínico
-        this.renderActiveDashboard();
     },
 
     terminateSimulationLoop(endReason) {
@@ -213,9 +278,7 @@ window.App = {
             return;
         }
 
-        // Si fue evacuado con éxito, avanzar el índice de casos para la próxima instancia
         this.state.currentScenarioIndex++;
-        
         if (this.state.currentScenarioIndex < ScenariosDB.length) {
             this.initScenarioInstance();
         } else {
@@ -223,6 +286,7 @@ window.App = {
         }
     },
 
+    // --- PANELES DE AUDITORÍA FINAL ---
     showResults(died = false) {
         this.hideAllPages();
         document.getElementById("resultsPage").classList.remove("hidden");
@@ -233,24 +297,23 @@ window.App = {
 
         if (died) {
             if (scoreDisplay) scoreDisplay.innerText = "0 pts (Óbito)";
-            if (levelDisplay) levelDisplay.innerText = "💀 Óbito en Operación";
-            this.renderCompetencyChart({ MARCH_M: 0, MARCH_A: 0, General: 0 });
+            if (levelDisplay) levelDisplay.innerText = "💀 Óbito del Paciente en Operación";
+            this.renderCompetencyChart({ MARCH_M: 10, MARCH_A: 10, General: 10 });
         } else {
             if (scoreDisplay) scoreDisplay.innerText = `${audit.promedioGral} pts`;
-            if (levelDisplay) levelDisplay.innerText = audit.promedioGral >= 80 ? "🏆 Operador Clínico de Alto Criterio" : "⚡ Operador en Desarrollo";
+            if (levelDisplay) levelDisplay.innerText = audit.promedioGral >= 80 ? "🏆 Alto Criterio Operativo" : "⚡ Operador en Desarrollo";
             this.renderCompetencyChart(audit.competencias);
         }
 
-        // Renderizar el desglose de debilidades y fortalezas detallado
         const strengthsList = document.getElementById("strengthsList");
         const weaknessesList = document.getElementById("weaknessesList");
 
         if (died) {
-            strengthsList.innerHTML = "<li>❌ No se lograron mitigar las amenazas letales a tiempo.</li>";
-            weaknessesList.innerHTML = "<li>⚠️ Falla crítica en la priorización del algoritmo MARCH.</li><li>⚠️ Demora en procedimientos de control de fluidos/sangrado.</li>";
+            strengthsList.innerHTML = "<li>❌ No se mitigó el colapso exanguinante o respiratorio.</li>";
+            weaknessesList.innerHTML = "<li>⚠️ Falla crítica en el algoritmo de priorización MARCH / TCCC.</li><li>⚠️ Prescripción de tratamientos secundarios antes de asegurar amenazas vitales.</li>";
         } else {
-            strengthsList.innerHTML = "<li>✅ Control efectivo del shock hemodinámico.</li><li>✅ Estabilización procedimental correcta del entorno.</li>";
-            weaknessesList.innerHTML = audit.promedioGral < 85 ? "<li>⚠️ Se detectaron demoras operativas o acciones secundarias fuera de secuencia.</li>" : "<li>✅ Excelente apego a las directrices TCCC internacionales.</li>";
+            strengthsList.innerHTML = "<li>✅ Demostración de criterio lógico bajo presión.</li><li>✅ Mitigación correcta de la cascada hemodinámica.</li>";
+            weaknessesList.innerHTML = audit.promedioGral < 85 ? "<li>⚠️ Se registraron acciones secundarias inefectivas fuera de secuencia.</li>" : "<li>✅ Apego riguroso a las guías tácticas internacionales.</li>";
         }
     },
 
@@ -262,10 +325,10 @@ window.App = {
         this.state.radarInstance = new Chart(ctx.getContext('2d'), {
             type: 'radar',
             data: {
-                labels: ['M - Hemorragias', 'A - Vía Aérea', 'R - Respiración', 'C/H - Soporte'],
+                labels: ['M - Hemorrage', 'A - Airway', 'R - Respiration', 'C/H - Support'],
                 datasets: [{
-                    label: 'Criterio Operativo',
-                    data: [competencias.MARCH_M || 40, competencias.MARCH_A || 40, 50, competencias.General || 40],
+                    label: 'Perfil de Competencias',
+                    data: [competencias.MARCH_M || 50, competencies.MARCH_A || 45, 60, competencias.General || 50],
                     backgroundColor: 'rgba(37, 99, 235, 0.3)',
                     borderColor: '#3b82f6',
                     pointBackgroundColor: '#fff'
@@ -275,6 +338,7 @@ window.App = {
         });
     },
 
+    // --- CAMPUS VIRTUAL CON SOPORTE MULTIMEDIA Y MANUALES ---
     showCampus() {
         this.hideAllPages();
         document.getElementById("campusPage").classList.remove("hidden");
@@ -284,25 +348,69 @@ window.App = {
     renderCampusCourses() {
         const grid = document.getElementById('coursesGrid');
         if (!grid) return;
+
         grid.innerHTML = CoursesDB.map(course => `
-            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 flex flex-col overflow-hidden">
-                <div class="bg-blue-600 h-32 flex items-center justify-center text-white relative">
+            <div class="bg-white rounded-3xl shadow-lg border border-slate-200 flex flex-col overflow-hidden transform hover:-translate-y-1 transition-all">
+                <div class="bg-blue-600 h-36 flex items-center justify-center text-white relative">
                     <i class="fas ${course.icon} text-5xl opacity-90"></i>
                     <div class="absolute top-3 right-3 bg-slate-900/80 text-white text-xs font-bold px-3 py-1 rounded-lg">$${course.price.toLocaleString('es-AR')}</div>
                 </div>
-                <div class="p-5 flex-1 flex flex-col">
-                    <h3 class="text-base font-bold text-slate-800 mb-1">${course.title}</h3>
-                    <p class="text-slate-500 text-xs mb-4 flex-1">${course.desc}</p>
+                <div class="p-6 flex-1 flex flex-col">
+                    <h3 class="text-lg font-bold text-slate-800 mb-1 leading-tight">${course.title}</h3>
+                    <p class="text-slate-500 text-xs mb-4 flex-1 leading-relaxed">${course.desc}</p>
+                    
                     ${course.purchased ? `
-                        <button class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl text-sm transition"><i class="fas fa-file-pdf mr-2"></i>Descargar Manual</button>
+                        <div class="space-y-3 mt-auto">
+                            <div class="relative pb-[56.25%] h-0 rounded-xl overflow-hidden shadow border border-slate-100">
+                                <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed/${course.videoId}" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                            <button onclick="App.downloadCourseMaterial('${course.title}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl text-sm transition shadow"><i class="fas fa-file-pdf mr-2"></i>Descargar Manual Clínico</button>
+                        </div>
                     ` : `
-                        <a href="${course.link}" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-center text-sm transition"><i class="fas fa-shopping-cart mr-2"></i>Adquirir Formación</a>
+                        <a href="${course.link}" target="_blank" class="w-full mt-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-center text-sm transition shadow"><i class="fas fa-shopping-cart mr-2"></i>Adquirir Formación</a>
                     `}
                 </div>
             </div>
         `).join('');
     },
 
+    downloadCourseMaterial(courseTitle) {
+        // Generación asíncrona a demanda de manuales en PDF para el alumno
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFillColor(15, 23, 42); 
+        doc.rect(0, 0, 210, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.text("Manual de Estudio Académico Oficial", 15, 18);
+        
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Material de soporte para el programa: ${courseTitle}`, 15, 28);
+        
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(15);
+        doc.setFont("helvetica", "bold");
+        doc.text("Índice de Contenidos Analíticos de Criterio:", 15, 55);
+        
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text("1. Algoritmos de abordaje primario bajo escenarios de alto estrés operativo.", 15, 70);
+        doc.text("2. Toma de decisiones dinámicas basadas en evidencia prehospitalaria.", 15, 80);
+        doc.text("3. Identificación y tratamiento prioritario de amenazas letales.", 15, 90);
+        doc.text("4. Administración estratégica de recursos e inmovilización pre-evacuación.", 15, 100);
+        
+        doc.setTextColor(148, 163, 184);
+        doc.setFontSize(9);
+        doc.text("Documento oficial emitido por INST. REGULUS y avalado por REMAEP.", 15, 280);
+
+        doc.save(`Manual_${courseTitle.replace(/ /g, '_')}.pdf`);
+    },
+
+    // --- PANEL ADMINISTRATIVO SAAS MARCA BLANCA ---
     showSaaSPanel() {
         this.hideAllPages();
         const panel = document.getElementById("saasAdminPanel");
@@ -313,7 +421,7 @@ window.App = {
     },
 
     downloadCertificate() {
-        const name = prompt("Nombre completo para los avales académicos:") || "Operador Clínico";
+        const name = prompt("Nombre completo del profesional para asimilar en los avales:") || "Operador Clínico";
         const audit = window.EvaluationEngine.getFinalMetrics();
         if (window.CertificateGenerator) {
             CertificateGenerator.generate(name, audit.promedioGral || 0);
@@ -321,6 +429,7 @@ window.App = {
     }
 };
 
+// Inicialización asíncrona segura
 document.addEventListener("DOMContentLoaded", () => {
-    window.App.init();
+    if (window.App) window.App.init();
 });
