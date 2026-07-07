@@ -1,5 +1,5 @@
 // ====================================================================
-// app.js - CENTRO DE MANDO CLÍNICO V2 (ASARI S.A.S. BRANDING)
+// app.js - CENTRO DE MANDO CLÍNICO V2 (FULL VERSION)
 // ====================================================================
 
 let CoursesDB = [
@@ -16,7 +16,7 @@ window.App = {
     },
 
     init() {
-        console.log("✅ ASARI Command Center: Sistemas Operativos.");
+        console.log("✅ ASARI Command Center: Sistemas Operativos Iniciados.");
         this.loadCoursesData();
         
         // Atajo Oculto para Administradores (Ctrl + Shift + S)
@@ -30,46 +30,81 @@ window.App = {
 
     loadCoursesData() { try { const saved = localStorage.getItem("saas_courses_db"); if (saved) CoursesDB = JSON.parse(saved); } catch (err) {} },
     saveCoursesData() { localStorage.setItem("saas_courses_db", JSON.stringify(CoursesDB)); },
-    hideAllPages() { ["landingPage", "simulatorPage", "resultsPage", "campusPage", "saasAdminPanel"].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add("hidden"); }); },
-    goBackToLanding() { if (this.state.timelineEngine) this.state.timelineEngine.stop(); this.hideAllPages(); const landing = document.getElementById("landingPage"); if (landing) landing.classList.remove("hidden"); },
+    
+    hideAllPages() { 
+        ["landingPage", "simulatorPage", "resultsPage", "campusPage", "saasAdminPanel"].forEach(id => { 
+            const el = document.getElementById(id); 
+            if (el) el.classList.add("hidden"); 
+        }); 
+    },
+    
+    goBackToLanding() { 
+        if (this.state.timelineEngine) this.state.timelineEngine.stop(); 
+        this.hideAllPages(); 
+        const landing = document.getElementById("landingPage"); 
+        if (landing) landing.classList.remove("hidden"); 
+    },
 
     startSimulation() {
-        // Corrección: Búsqueda directa sin forzar el scope de 'window'
-        if (typeof ScenariosDB === "undefined" || ScenariosDB.length === 0) { 
-            alert("Sincronizando base de datos clínica. Aguarde un instante..."); 
-            return; 
+        try {
+            console.log("Iniciando secuencia de simulación...");
+            
+            // Validación robusta
+            const db = window.ScenariosDB || (typeof ScenariosDB !== "undefined" ? ScenariosDB : null);
+            if (!db || db.length === 0) { 
+                alert("⏳ Sincronizando base de datos clínica. Aguarde un instante y vuelva a intentar."); 
+                return; 
+            }
+            
+            this.state.currentScenarioIndex = 0;
+            this.state.sessionLog = [];
+            
+            // Limpiar motor de evaluación si existe
+            const evalEngine = window.EvaluationEngine || (typeof EvaluationEngine !== "undefined" ? EvaluationEngine : null);
+            if (evalEngine && typeof evalEngine.reset === 'function') {
+                evalEngine.reset();
+            }
+            
+            this.hideAllPages();
+            const simPage = document.getElementById("simulatorPage");
+            if (simPage) simPage.classList.remove("hidden");
+            
+            this.initScenarioInstance();
+
+        } catch (error) {
+            // SI ALGO FALLA, ESTE MENSAJE NOS DIRÁ EXACTAMENTE QUÉ FUE
+            alert("⚠️ Error crítico al iniciar: " + error.message);
+            console.error("Detalle del error:", error);
         }
-        
-        this.state.currentScenarioIndex = 0;
-        this.state.sessionLog = [];
-        
-        if (typeof EvaluationEngine !== "undefined" && typeof EvaluationEngine.reset === 'function') {
-            EvaluationEngine.reset();
-        }
-        
-        this.hideAllPages();
-        const simPage = document.getElementById("simulatorPage");
-        if (simPage) simPage.classList.remove("hidden");
-        
-        this.initScenarioInstance();
     },
 
     initScenarioInstance() {
-        const scenario = ScenariosDB[this.state.currentScenarioIndex];
-        if (!scenario) return;
+        const db = window.ScenariosDB || ScenariosDB;
+        const scenario = db[this.state.currentScenarioIndex];
+        if (!scenario) throw new Error("Escenario no encontrado en la base de datos.");
 
-        if (typeof PatientEngine !== "undefined") {
-            this.state.patientEngine = new PatientEngine(scenario.patientTemplate || {});
+        const PEngine = window.PatientEngine || PatientEngine;
+        if (PEngine) {
+            this.state.patientEngine = new PEngine(scenario.patientTemplate || {});
+        } else {
+            throw new Error("El motor PatientEngine no está cargado.");
         }
         
         this.mountScenarioUI(scenario);
 
-        if (typeof TimelineEngine !== "undefined") {
-            this.state.timelineEngine = new TimelineEngine(
+        const TEngine = window.TimelineEngine || TimelineEngine;
+        if (TEngine) {
+            // Asegurarse de detener cualquier reloj previo
+            if (this.state.timelineEngine) this.state.timelineEngine.stop();
+            
+            this.state.timelineEngine = new TEngine(
                 (tick) => this.onPhysiologicTick(tick),
                 (complication) => this.onDynamicComplication(complication)
             );
+        } else {
+            throw new Error("El motor TimelineEngine no está cargado.");
         }
+        
         this.state.timelineEngine.start(scenario.timeLimit);
     },
 
@@ -80,10 +115,8 @@ window.App = {
         container.innerHTML = `
             <div class="bg-slate-900 rounded-3xl p-6 border border-slate-700 shadow-[0_0_40px_rgba(0,0,0,0.8)] relative flex flex-col lg:flex-row gap-6 h-[85vh]">
                 
-                <!-- PANEL IZQUIERDO: DIAGNÓSTICO Y ANATOMÍA -->
                 <div class="w-full lg:w-4/12 flex flex-col gap-4 h-full">
                     
-                    <!-- HUD Superior -->
                     <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex justify-between items-center shadow-inner">
                         <div>
                             <div class="text-[9px] uppercase tracking-widest text-slate-500 font-bold">Operación en Curso</div>
@@ -95,25 +128,20 @@ window.App = {
                         </div>
                     </div>
 
-                    <!-- MAPA ANATÓMICO SVG DINÁMICO -->
                     <div class="relative flex-1 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center shadow-inner overflow-hidden min-h-[300px]">
                         <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800/20 via-slate-900/5 to-transparent pointer-events-none"></div>
                         
-                        <!-- Charco de Sangre Creciente -->
                         <div id="visual-blood" class="absolute bottom-10 bg-red-600 rounded-[100%] blur-xl opacity-0 transition-all duration-[2000ms] ease-out" style="width: 0px; height: 0px;"></div>
                         
-                        <!-- Silueta Humana Vectorial -->
                         <svg id="svg-body" viewBox="0 0 100 250" class="h-[85%] z-10 transition-colors duration-1000 ease-in-out" fill="#cbd5e1">
                             <path d="M50,10 C56,10 61,15 61,21 C61,27 56,32 50,32 C44,32 39,27 39,21 C39,15 44,10 50,10 Z M50,35 C65,35 75,40 80,50 L85,90 C86,95 80,97 78,92 L72,60 L65,110 L65,230 C65,240 55,240 53,230 L50,140 L47,230 C45,240 35,240 35,230 L35,110 L28,60 L22,92 C20,97 14,95 15,90 L20,50 C25,40 35,35 50,35 Z"/>
                         </svg>
 
-                        <!-- Indicador GCS Flotante -->
                         <div id="visual-eyes" class="absolute top-4 right-4 text-[10px] font-bold px-3 py-1.5 rounded bg-slate-900/90 text-slate-300 border border-slate-700 shadow-lg">
                             <i class='fas fa-brain text-emerald-400 mr-2'></i> GCS: 15
                         </div>
                     </div>
 
-                    <!-- MONITORES MULTIPARAMÉTRICOS -->
                     <div class="grid grid-cols-2 gap-3">
                         <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
                             <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest"><i class="fas fa-heartbeat text-red-500 mr-2"></i>FC (bpm)</div>
@@ -142,16 +170,13 @@ window.App = {
                     </div>
                 </div>
 
-                <!-- PANEL DERECHO: BITÁCORA Y COMANDOS -->
                 <div class="w-full lg:w-8/12 flex flex-col gap-4 h-full">
                     
-                    <!-- Información del Escenario -->
                     <div class="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
                         <h2 class="text-xl font-black tracking-tight text-white mb-2">${scenario.title}</h2>
                         <p class="text-sm text-slate-300 leading-relaxed font-medium"><span class="text-blue-400 font-bold">📋 Despacho:</span> ${scenario.vitals}</p>
                     </div>
 
-                    <!-- BITÁCORA CLÍNICA (Instructor Silencioso) -->
                     <div class="flex-1 bg-slate-950 rounded-xl border border-slate-800 flex flex-col overflow-hidden shadow-inner">
                         <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"><i class="fas fa-satellite-dish mr-2 text-blue-500"></i>Log de Operaciones Tácticas</span>
@@ -162,7 +187,6 @@ window.App = {
                         </div>
                     </div>
 
-                    <!-- TERMINAL DE COMANDOS -->
                     <div class="bg-slate-900 p-4 rounded-xl border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
                         <label class="text-[11px] font-bold text-blue-400 uppercase tracking-widest flex items-center mb-2">
                             <i class="fas fa-terminal mr-2"></i> Consola de Mando Clínico
@@ -203,8 +227,9 @@ window.App = {
         if (!this.state.patientEngine) return;
         const patient = this.state.patientEngine.getState();
         
-        if (typeof ScenariosDB === "undefined") return;
-        const scenario = ScenariosDB[this.state.currentScenarioIndex];
+        const db = window.ScenariosDB || ScenariosDB;
+        if (!db) return;
+        const scenario = db[this.state.currentScenarioIndex];
 
         const timerDisplay = document.getElementById("timerDisplay");
         if (timerDisplay) timerDisplay.innerText = scenario.timeLimit - patient.elapsedTime;
@@ -300,9 +325,12 @@ window.App = {
             return;
         }
 
-        if (typeof ClinicalRules !== "undefined" && typeof EvaluationEngine !== "undefined") {
-            const feedback = ClinicalRules.evaluateDecision(action, patientState);
-            EvaluationEngine.logDecision(action, patientState, feedback, argumentText);
+        const CRules = window.ClinicalRules || ClinicalRules;
+        const EEngine = window.EvaluationEngine || EvaluationEngine;
+
+        if (CRules && EEngine) {
+            const feedback = CRules.evaluateDecision(action, patientState);
+            EEngine.logDecision(action, patientState, feedback, argumentText);
             this.appendClinicalLog(feedback.logMessage, !feedback.correct);
         }
         
@@ -321,113 +349,4 @@ window.App = {
         this.updateMonitorValues();
     },
 
-    onPhysiologicTick(seconds) {
-        if (!this.state.patientEngine) return;
-        const patient = this.state.patientEngine.nextTick(seconds);
-        if (!patient.alive) { this.terminateSimulationLoop("patient_died"); return; }
-        this.updateMonitorValues(); 
-    },
-
-    onDynamicComplication(complication) {
-        this.appendClinicalLog(`[ALERTA CRÍTICA] ${complication.title}: ${complication.message}`, true);
-        
-        const container = document.getElementById("scenarioContainer");
-        if(container) {
-            container.classList.add("border-red-500", "shadow-[0_0_50px_rgba(239,68,68,0.5)]");
-            setTimeout(() => {
-                container.classList.remove("border-red-500", "shadow-[0_0_50px_rgba(239,68,68,0.5)]");
-            }, 1000);
-        }
-    },
-
-    terminateSimulationLoop(endReason) {
-        if (this.state.timelineEngine) this.state.timelineEngine.stop();
-        if (endReason === "patient_died") { this.showResults(true); return; }
-        
-        this.state.currentScenarioIndex++;
-        if (typeof ScenariosDB !== "undefined" && this.state.currentScenarioIndex < ScenariosDB.length) { 
-            this.initScenarioInstance(); 
-        } else { 
-            this.showResults(false); 
-        }
-    },
-
-    showResults(died = false) {
-        this.hideAllPages();
-        const resultsPage = document.getElementById("resultsPage");
-        if (resultsPage) resultsPage.classList.remove("hidden");
-        
-        let audit = { promedioGral: 0, competencias: { MARCH_M: 0, MARCH_A: 0, General: 0 } };
-        if (typeof EvaluationEngine !== "undefined" && typeof EvaluationEngine.getFinalMetrics === 'function') audit = EvaluationEngine.getFinalMetrics();
-
-        const scoreDisplay = document.getElementById("resultScore");
-        const levelDisplay = document.getElementById("resultLevel");
-
-        if (died) {
-            if (scoreDisplay) scoreDisplay.innerText = "0 pts (Óbito)";
-            if (levelDisplay) levelDisplay.innerText = "💀 Óbito en Operación";
-            this.renderCompetencyChart({ MARCH_M: 10, MARCH_A: 10, General: 10 });
-        } else {
-            if (scoreDisplay) scoreDisplay.innerText = `${audit.promedioGral} pts`;
-            if (levelDisplay) levelDisplay.innerText = audit.promedioGral >= 80 ? "🏆 Alto Criterio Operativo" : "⚡ Operador en Desarrollo";
-            this.renderCompetencyChart(audit.competencias);
-        }
-
-        const strengthsList = document.getElementById("strengthsList");
-        const weaknessesList = document.getElementById("weaknessesList");
-        if (strengthsList && weaknessesList) {
-            if (died) {
-                strengthsList.innerHTML = "<li>❌ Falla crítica en la estabilización de amenazas vitales primarias.</li>";
-                weaknessesList.innerHTML = "<li>⚠️ Se detectaron tiempos muertos por comandos imprecisos u omisiones en el protocolo TCCC.</li>";
-            } else {
-                strengthsList.innerHTML = "<li>✅ Sobrevida lograda mediante intervenciones precisas.</li>";
-                weaknessesList.innerHTML = audit.promedioGral < 85 ? "<li>⚠️ Se registraron órdenes inefectivas que consumieron tiempo valioso.</li>" : "<li>✅ Comando y control ejemplar bajo estrés dinámico.</li>";
-            }
-        }
-    },
-
-    renderCompetencyChart(competencias) {
-        const ctx = document.getElementById("radarChart");
-        if (!ctx) return;
-        if (this.state.radarInstance) this.state.radarInstance.destroy();
-        this.state.radarInstance = new Chart(ctx.getContext('2d'), {
-            type: 'radar',
-            data: {
-                labels: ['M - Hemorragias', 'A - Vía Aérea', 'R - Respiración', 'C/H - Soporte'],
-                datasets: [{
-                    label: 'Perfil de Competencias',
-                    data: [competencias.MARCH_M || 40, competencias.MARCH_A || 45, 60, competencias.General || 50],
-                    backgroundColor: 'rgba(37, 99, 235, 0.3)', borderColor: '#3b82f6', pointBackgroundColor: '#fff'
-                }]
-            },
-            options: { scales: { r: { beginAtZero: true, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } } }
-        });
-    },
-
-    showCampus() { this.hideAllPages(); const campus = document.getElementById("campusPage"); if (campus) campus.classList.remove("hidden"); this.renderCampusCourses(); },
-    renderCampusCourses() { /* Lógica del campus omitida para brevedad */ },
-    
-    showSaaSPanel() { 
-        this.hideAllPages(); 
-        const panel = document.getElementById("saasAdminPanel"); 
-        if (panel) { 
-            panel.classList.remove("hidden"); 
-            panel.classList.add("flex"); 
-        } 
-    },
-    
-    downloadCertificate() {
-        const name = prompt("Operador Clínico (Certificación Oficial):") || "Operador Prehospitalario";
-        let audit = { promedioGral: 0 };
-        if (typeof EvaluationEngine !== "undefined" && typeof EvaluationEngine.getFinalMetrics === 'function') {
-            audit = EvaluationEngine.getFinalMetrics();
-        }
-        if (typeof CertificateGenerator !== "undefined") {
-            CertificateGenerator.generate(name, audit.promedioGral || 0);
-        } else {
-            alert("Módulo de generación no disponible.");
-        }
-    }
-};
-
-document.addEventListener("DOMContentLoaded", () => { if (window.App) window.App.init(); });
+    onPhysiologicTick(
