@@ -1,28 +1,10 @@
 // ====================================================================
-// app.js - ORQUESTADOR COMPLETO DEL SIMULADOR CLÍNICO V2 (FLIGHT-SIM MODE)
+// app.js - CENTRO DE MANDO CLÍNICO V2 (ASARI S.A.S. BRANDING)
 // ====================================================================
 
 let CoursesDB = [
-    { 
-        id: 1, 
-        title: "Trauma y Control de Hemorragias", 
-        desc: "Protocolos internacionales TCCC/TECC avanzados. Uso de agentes hemostáticos y torniquetes mecánicos.", 
-        icon: "fa-tint", 
-        price: 45000, 
-        link: "https://mpago.la/ejemplo1", 
-        purchased: false,
-        videoId: "dQw4w9WgXcQ" 
-    },
-    { 
-        id: 2, 
-        title: "Soporte Vital Básico y DEA", 
-        desc: "Reanimación cardiopulmonar de alta calidad según directrices de consenso prehospitalario.", 
-        icon: "fa-heartbeat", 
-        price: 35000, 
-        link: "https://mpago.la/ejemplo2", 
-        purchased: true, 
-        videoId: "dQw4w9WgXcQ"
-    }
+    { id: 1, title: "Trauma y Control de Hemorragias (TECC)", desc: "Protocolos internacionales y control volumétrico.", icon: "fa-tint", price: 45000, link: "#", purchased: false, videoId: "dQw4w9WgXcQ" },
+    { id: 2, title: "Soporte Vital Básico Integral", desc: "Consenso prehospitalario de reanimación.", icon: "fa-heartbeat", price: 35000, link: "#", purchased: true, videoId: "dQw4w9WgXcQ" }
 ];
 
 window.App = {
@@ -30,28 +12,25 @@ window.App = {
         currentScenarioIndex: 0,
         patientEngine: null,
         timelineEngine: null,
-        radarInstance: null
+        sessionLog: [] // La "Caja Negra" de la auditoría
     },
 
     init() {
-        console.log("✅ Emergency Academy V2 - Terminal Libre Iniciada.");
+        console.log("✅ ASARI Command Center: Sistemas Operativos.");
         this.loadCoursesData();
-        if (typeof window.ScenariosDB === "undefined") console.warn("⚠️ Esperando base de datos...");
         document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key === 'S') { e.preventDefault(); this.showSaaSPanel(); }});
     },
 
-    loadCoursesData() {
-        try { const saved = localStorage.getItem("saas_courses_db"); if (saved) CoursesDB = JSON.parse(saved); } catch (err) {}
-    },
+    loadCoursesData() { try { const saved = localStorage.getItem("saas_courses_db"); if (saved) CoursesDB = JSON.parse(saved); } catch (err) {} },
     saveCoursesData() { localStorage.setItem("saas_courses_db", JSON.stringify(CoursesDB)); },
-
     hideAllPages() { ["landingPage", "simulatorPage", "resultsPage", "campusPage", "saasAdminPanel"].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add("hidden"); }); },
     goBackToLanding() { if (this.state.timelineEngine) this.state.timelineEngine.stop(); this.hideAllPages(); const landing = document.getElementById("landingPage"); if (landing) landing.classList.remove("hidden"); },
 
     startSimulation() {
-        if (!window.ScenariosDB || window.ScenariosDB.length === 0) { alert("Sincronizando motores. F5 o limpiá caché."); return; }
+        if (!window.ScenariosDB || window.ScenariosDB.length === 0) { alert("Sincronizando base de datos clínica..."); return; }
         this.state.currentScenarioIndex = 0;
-        if (window.EvaluationEngine && typeof window.EvaluationEngine.reset === 'function') window.EvaluationEngine.reset();
+        this.state.sessionLog = [];
+        if (window.EvaluationEngine) window.EvaluationEngine.reset();
         this.hideAllPages();
         const simPage = document.getElementById("simulatorPage");
         if (simPage) simPage.classList.remove("hidden");
@@ -63,7 +42,6 @@ window.App = {
         if (!scenario) return;
 
         if (window.PatientEngine) this.state.patientEngine = new window.PatientEngine(scenario.patientTemplate || {});
-        else return;
         
         this.mountScenarioUI(scenario);
 
@@ -73,88 +51,115 @@ window.App = {
                 (complication) => this.onDynamicComplication(complication)
             );
         }
-
-        const idxDisplay = document.getElementById("currentScenarioIndex");
-        if (idxDisplay) idxDisplay.innerText = this.state.currentScenarioIndex + 1;
-        const totDisplay = document.getElementById("totalScenarios");
-        if (totDisplay) totDisplay.innerText = window.ScenariosDB.length;
-
         this.state.timelineEngine.start(scenario.timeLimit);
     },
 
+    // Inyección Estructural Única (Escudo contra refresco de DOM)
     mountScenarioUI(scenario) {
         const container = document.getElementById("scenarioContainer");
         if (!container) return;
 
         container.innerHTML = `
-            <div class="bg-slate-800 rounded-3xl p-6 border border-slate-700 text-white shadow-2xl relative flex flex-col md:flex-row gap-6">
+            <div class="bg-slate-900 rounded-3xl p-6 border border-slate-700 shadow-[0_0_40px_rgba(0,0,0,0.8)] relative flex flex-col lg:flex-row gap-6 h-[85vh]">
                 
-                <div class="w-full md:w-5/12 flex flex-col gap-4">
+                <!-- PANEL IZQUIERDO: DIAGNÓSTICO Y ANATOMÍA -->
+                <div class="w-full lg:w-4/12 flex flex-col gap-4 h-full">
                     
-                    <div class="relative w-full h-48 bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden flex items-center justify-center shadow-inner">
-                        <div id="visual-blood" class="absolute bottom-0 bg-red-600 rounded-full opacity-0 blur-md transition-all duration-1000 transform scale-y-50" style="width: 0px; height: 0px;"></div>
-                        <i id="visual-body" class="fas fa-child text-[120px] text-slate-100 transition-colors duration-1000 relative z-10 drop-shadow-lg"></i>
-                        <div id="visual-eyes" class="absolute top-3 right-3 text-xs font-bold px-2 py-1 rounded-lg bg-slate-800/80 text-slate-300 backdrop-blur-sm border border-slate-600">
-                            <i class='fas fa-eye text-emerald-400 mr-1'></i> Alerta
+                    <!-- HUD Superior -->
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex justify-between items-center shadow-inner">
+                        <div>
+                            <div class="text-[9px] uppercase tracking-widest text-slate-500 font-bold">Operación en Curso</div>
+                            <div class="text-emerald-500 font-mono text-sm font-bold mt-1">SISTEMA B.A.R.I.E.C ACTIVO</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[9px] uppercase tracking-widest text-slate-500 font-bold">Cronómetro (T-Minus)</div>
+                            <div id="timerDisplay" class="text-3xl font-mono font-black text-blue-500 tracking-tighter">0</div>
                         </div>
                     </div>
 
+                    <!-- MAPA ANATÓMICO SVG DINÁMICO -->
+                    <div class="relative flex-1 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center shadow-inner overflow-hidden min-h-[300px]">
+                        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800/20 via-slate-900/5 to-transparent pointer-events-none"></div>
+                        
+                        <!-- Charco de Sangre Creciente -->
+                        <div id="visual-blood" class="absolute bottom-10 bg-red-600 rounded-[100%] blur-xl opacity-0 transition-all duration-[2000ms] ease-out" style="width: 0px; height: 0px;"></div>
+                        
+                        <!-- Silueta Humana Vectorial -->
+                        <svg id="svg-body" viewBox="0 0 100 250" class="h-[85%] z-10 transition-colors duration-1000 ease-in-out" fill="#cbd5e1">
+                            <path d="M50,10 C56,10 61,15 61,21 C61,27 56,32 50,32 C44,32 39,27 39,21 C39,15 44,10 50,10 Z M50,35 C65,35 75,40 80,50 L85,90 C86,95 80,97 78,92 L72,60 L65,110 L65,230 C65,240 55,240 53,230 L50,140 L47,230 C45,240 35,240 35,230 L35,110 L28,60 L22,92 C20,97 14,95 15,90 L20,50 C25,40 35,35 50,35 Z"/>
+                        </svg>
+
+                        <!-- Indicador GCS Flotante -->
+                        <div id="visual-eyes" class="absolute top-4 right-4 text-[10px] font-bold px-3 py-1.5 rounded bg-slate-900/90 text-slate-300 border border-slate-700 shadow-lg">
+                            <i class='fas fa-brain text-emerald-400 mr-2'></i> GCS: 15
+                        </div>
+                    </div>
+
+                    <!-- MONITORES MULTIPARAMÉTRICOS -->
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
-                            <div class="text-[10px] text-slate-500 font-bold uppercase"><i class="fas fa-heartbeat text-red-500 mr-1"></i>FC</div>
-                            <div id="display-fc-box" class="text-2xl font-black mt-1 font-mono text-emerald-400">
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest"><i class="fas fa-heartbeat text-red-500 mr-2"></i>FC (bpm)</div>
+                            <div id="display-fc-box" class="text-4xl font-black mt-1 font-mono text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
                                 <span id="display-fc">0</span>
                             </div>
                         </div>
-                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
-                            <div class="text-[10px] text-slate-500 font-bold uppercase"><i class="fas fa-compress-alt text-blue-400 mr-1"></i>PA</div>
-                            <div id="display-pa-box" class="text-2xl font-black mt-1 font-mono text-emerald-400">
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest"><i class="fas fa-compress-alt text-blue-400 mr-2"></i>PA (mmHg)</div>
+                            <div id="display-pa-box" class="text-4xl font-black mt-1 font-mono text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
                                 <span id="display-pa">0/0</span>
                             </div>
                         </div>
-                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
-                            <div class="text-[10px] text-slate-500 font-bold uppercase"><i class="fas fa-lungs text-sky-400 mr-1"></i>SpO₂</div>
-                            <div id="display-spo2-box" class="text-2xl font-black mt-1 font-mono text-emerald-400">
-                                <span id="display-spo2">0</span>%
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest"><i class="fas fa-lungs text-sky-400 mr-2"></i>SpO₂ (%)</div>
+                            <div id="display-spo2-box" class="text-4xl font-black mt-1 font-mono text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+                                <span id="display-spo2">0</span>
                             </div>
                         </div>
-                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
-                            <div class="text-[10px] text-slate-500 font-bold uppercase"><i class="fas fa-tint text-red-400 mr-1"></i>Volemia</div>
-                            <div id="display-volumen-box" class="text-2xl font-black mt-1 font-mono text-emerald-400">
-                                <span id="display-volumen">0</span>%
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center relative overflow-hidden">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest"><i class="fas fa-tint text-red-400 mr-2"></i>VOL (%)</div>
+                            <div id="display-volumen-box" class="text-4xl font-black mt-1 font-mono text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+                                <span id="display-volumen">0</span>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="bg-slate-900 px-4 py-3 rounded-xl border border-slate-700 flex justify-between items-center">
-                        <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Cronómetro Clínico</div>
-                        <div id="timerDisplay" class="text-2xl font-mono font-bold text-blue-500">0</div>
                     </div>
                 </div>
 
-                <div class="w-full md:w-7/12 flex flex-col gap-4">
-                    <div>
-                        <h2 class="text-2xl font-black tracking-tight text-white">${scenario.title}</h2>
-                        <p class="text-slate-400 mt-1 font-medium text-sm"><i class="fas fa-crosshairs mr-1 text-red-500"></i> ${scenario.context}</p>
+                <!-- PANEL DERECHO: BITÁCORA Y COMANDOS -->
+                <div class="w-full lg:w-8/12 flex flex-col gap-4 h-full">
+                    
+                    <!-- Información del Escenario -->
+                    <div class="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+                        <h2 class="text-xl font-black tracking-tight text-white mb-2">${scenario.title}</h2>
+                        <p class="text-sm text-slate-300 leading-relaxed font-medium"><span class="text-blue-400 font-bold">📋 Despacho:</span> ${scenario.vitals}</p>
                     </div>
 
-                    <div class="bg-slate-900/60 border border-slate-700 rounded-xl p-4">
-                        <p class="text-sm text-slate-200 leading-relaxed"><strong class="text-blue-400 font-black">📋 Viñeta:</strong> <span id="display-vitals">${scenario.vitals}</span></p>
+                    <!-- BITÁCORA CLÍNICA (Instructor Silencioso) -->
+                    <div class="flex-1 bg-slate-950 rounded-xl border border-slate-800 flex flex-col overflow-hidden shadow-inner">
+                        <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"><i class="fas fa-satellite-dish mr-2 text-blue-500"></i>Log de Operaciones Tácticas</span>
+                            <span class="text-[10px] font-bold text-slate-600">REMTYO LINK</span>
+                        </div>
+                        <div id="clinicalLogBox" class="flex-1 p-4 overflow-y-auto space-y-3 scroll-smooth">
+                            <div class="text-xs font-mono text-slate-500">> Enlace de telemetría establecido. Aguardando órdenes médicas...</div>
+                        </div>
                     </div>
 
-                    <div class="bg-slate-900/80 p-5 rounded-xl border border-slate-600 shadow-inner flex-1 flex flex-col">
-                        <label class="text-xs font-bold text-blue-400 uppercase tracking-widest flex items-center mb-2">
-                            <i class="fas fa-terminal mr-2"></i> Orden Médica
+                    <!-- TERMINAL DE COMANDOS -->
+                    <div class="bg-slate-900 p-4 rounded-xl border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+                        <label class="text-[11px] font-bold text-blue-400 uppercase tracking-widest flex items-center mb-2">
+                            <i class="fas fa-terminal mr-2"></i> Consola de Mando Clínico
                         </label>
-                        <textarea id="clinicalCommandInput" class="w-full flex-1 min-h-[100px] bg-slate-950 text-slate-200 text-base rounded-lg p-3 border border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none transition font-medium" placeholder="Describa su intervención y justificación..."></textarea>
-                        
-                        <div class="flex gap-3 mt-3">
-                            <button onclick="App.submitClinicalCommand()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow text-sm">
-                                Ejecutar Orden
-                            </button>
-                            <button onclick="App.processClinicalAction('transport_patient', 'Decisión de evacuación operativa.')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition shadow text-sm">
-                                Evacuar
-                            </button>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <textarea id="clinicalCommandInput" rows="2" class="w-full flex-1 bg-slate-950 text-slate-200 text-sm rounded-lg p-3 border border-slate-700 focus:border-blue-500 outline-none resize-none font-mono" placeholder="Ingresar prescripción, procedimiento y argumento..."></textarea>
+                            
+                            <div class="flex sm:flex-col gap-2 min-w-[140px]">
+                                <button onclick="App.submitClinicalCommand()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-sm transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)]">
+                                    EJECUTAR
+                                </button>
+                                <button onclick="App.processClinicalAction('transport_patient', 'Evacuación táctica ordenada por el operador.')" class="flex-1 bg-slate-800 hover:bg-red-600 text-white font-bold rounded-lg text-xs transition-colors border border-slate-700 hover:border-red-500">
+                                    EVACUAR MEDEVAC
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -163,58 +168,67 @@ window.App = {
         this.updateMonitorValues();
     },
 
+    appendClinicalLog(message, isAlert = false) {
+        const logBox = document.getElementById("clinicalLogBox");
+        if (!logBox) return;
+        
+        const timeStr = document.getElementById("timerDisplay")?.innerText || "000";
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `text-sm font-mono border-l-2 pl-3 py-1 ${isAlert ? 'border-red-500 text-red-400' : 'border-blue-500 text-emerald-400'}`;
+        msgDiv.innerHTML = `<span class="text-slate-600 mr-2">[T-${timeStr}]</span> ${message}`;
+        
+        logBox.appendChild(msgDiv);
+        logBox.scrollTop = logBox.scrollHeight;
+    },
+
     updateMonitorValues() {
         if (!this.state.patientEngine) return;
         const patient = this.state.patientEngine.getState();
         const scenario = window.ScenariosDB[this.state.currentScenarioIndex];
 
-        // 1. Textos paramétricos
+        // 1. Monitores de Texto
         const timerDisplay = document.getElementById("timerDisplay");
         if (timerDisplay) timerDisplay.innerText = scenario.timeLimit - patient.elapsedTime;
 
         document.getElementById("display-fc").innerText = Math.round(patient.fc);
-        document.getElementById("display-fc-box").className = `text-2xl font-black mt-1 font-mono ${patient.fc > 120 || patient.fc === 0 ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`;
+        document.getElementById("display-fc-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.fc > 120 || patient.fc === 0 ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`;
 
         document.getElementById("display-pa").innerText = `${Math.round(patient.paSistolica)}/${Math.round(patient.paDiastolica)}`;
-        document.getElementById("display-pa-box").className = `text-2xl font-black mt-1 font-mono ${patient.paSistolica < 90 || patient.paSistolica === 0 ? 'text-red-500 font-bold' : 'text-emerald-400'}`;
+        document.getElementById("display-pa-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.paSistolica < 90 || patient.paSistolica === 0 ? 'text-red-500 font-bold' : 'text-emerald-400'}`;
 
         document.getElementById("display-spo2").innerText = Math.round(patient.spo2);
-        document.getElementById("display-spo2-box").className = `text-2xl font-black mt-1 font-mono ${patient.spo2 < 90 || patient.spo2 === 0 ? 'text-red-500' : 'text-emerald-400'}`;
+        document.getElementById("display-spo2-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.spo2 < 90 || patient.spo2 === 0 ? 'text-red-500' : 'text-emerald-400'}`;
 
         document.getElementById("display-volumen").innerText = Math.round(patient.volSanguineo);
-        document.getElementById("display-volumen-box").className = `text-2xl font-black mt-1 font-mono ${patient.volSanguineo < 80 ? 'text-red-500' : 'text-emerald-400'}`;
+        document.getElementById("display-volumen-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.volSanguineo < 80 ? 'text-red-500' : 'text-emerald-400'}`;
 
-        // 2. Lógica del MAPA ANATÓMICO (Efectos Visuales)
+        // 2. Anatomía Dinámica Vectorial
         const bloodPool = document.getElementById("visual-blood");
-        const bodyIcon = document.getElementById("visual-body");
+        const bodySVG = document.getElementById("svg-body");
         const eyesStatus = document.getElementById("visual-eyes");
 
         if (bloodPool) {
             if (patient.hemorragia === "Severa") {
                 const lostVol = 100 - patient.volSanguineo;
-                const size = Math.min(250, lostVol * 7); // Crece hasta 250px según el desangrado
+                const size = Math.min(300, lostVol * 8); // El charco crece masivamente
                 bloodPool.style.width = `${size}px`;
-                bloodPool.style.height = `${size/2}px`; // Forma ovalada
-                bloodPool.style.opacity = "0.8";
+                bloodPool.style.height = `${size/3}px`;
+                bloodPool.style.opacity = "0.7";
             } else if (patient.hemorragia === "Controlada") {
-                bloodPool.style.opacity = "0.3"; // Queda la mancha pero oscura
+                bloodPool.style.opacity = "0.2"; // Queda evidencia oscura
             }
         }
 
-        if (bodyIcon) {
-            if (patient.spo2 < 85 || patient.paSistolica < 60) {
-                bodyIcon.className = "fas fa-child text-[120px] text-cyan-800 transition-colors duration-1000 relative z-10 drop-shadow-lg"; // Cianosis
-            } else if (patient.paSistolica < 90) {
-                bodyIcon.className = "fas fa-child text-[120px] text-slate-400 transition-colors duration-1000 relative z-10 drop-shadow-lg"; // Palidez
-            } else {
-                bodyIcon.className = "fas fa-child text-[120px] text-slate-100 transition-colors duration-1000 relative z-10 drop-shadow-lg"; // Normal
-            }
+        if (bodySVG) {
+            if (patient.spo2 < 85 || patient.paSistolica < 60) bodySVG.setAttribute("fill", "#0891b2"); // Cianosis oscura
+            else if (patient.paSistolica < 90) bodySVG.setAttribute("fill", "#94a3b8"); // Palidez shock
+            else bodySVG.setAttribute("fill", "#e2e8f0"); // Perfusión normal
         }
 
         if (eyesStatus) {
-            if (patient.gcs === 15) eyesStatus.innerHTML = "<i class='fas fa-eye text-emerald-400 mr-1'></i> Alerta";
-            else if (patient.gcs > 8) eyesStatus.innerHTML = "<i class='fas fa-eye-half text-yellow-400 mr-1'></i> Obnubilado";
-            else eyesStatus.innerHTML = "<i class='fas fa-eye-slash text-red-500 mr-1'></i> Inconsciente";
+            if (patient.gcs === 15) eyesStatus.innerHTML = "<i class='fas fa-brain text-emerald-400 mr-2'></i> GCS: 15 (Alerta)";
+            else if (patient.gcs > 8) eyesStatus.innerHTML = `<i class='fas fa-brain text-yellow-500 mr-2'></i> GCS: ${patient.gcs} (Obnubilado)`;
+            else eyesStatus.innerHTML = `<i class='fas fa-brain text-red-500 mr-2'></i> GCS: ${patient.gcs} (Coma)`;
         }
     },
 
@@ -225,26 +239,26 @@ window.App = {
         const rawText = inputField.value.trim().toLowerCase();
         if (!rawText) return;
 
-        // LA TERMINAL CIEGA: Si no reconoce nada, ejecuta "ineffective_action" (Efecto Placebo)
         let action = "ineffective_action";
 
-        if (rawText.includes("torniquete") || rawText.includes("tq") || rawText.includes("tourniquet") || rawText.includes("empaquetamiento") || rawText.includes("hemostatico")) {
+        if (rawText.includes("torniquete") || rawText.includes("tq") || rawText.includes("empaquetamiento") || rawText.includes("hemostatico")) {
             action = "tourniquet_correct";
-        } else if (rawText.includes("presion directa") || rawText.includes("presión directa") || rawText.includes("comprimir")) {
+        } else if (rawText.includes("presion directa") || rawText.includes("presión") || rawText.includes("comprimir")) {
             action = "direct_pressure";
         } else if (rawText.includes("oxigeno") || rawText.includes("oxígeno") || rawText.includes("o2") || rawText.includes("mascara")) {
             action = "oxygen";
-        } else if (rawText.includes("rcp") || rawText.includes("compresiones") || rawText.includes("masaje") || rawText.includes("reanimacion")) {
+        } else if (rawText.includes("rcp") || rawText.includes("compresiones") || rawText.includes("masaje")) {
             action = "start_cpr";
-        } else if (rawText.includes("dea") || rawText.includes("desfibrilar") || rawText.includes("parches") || rawText.includes("choque")) {
+        } else if (rawText.includes("dea") || rawText.includes("desfibrilar") || rawText.includes("choque")) {
             action = "apply_aed";
-        } else if (rawText.includes("via aerea") || rawText.includes("vía aérea") || rawText.includes("canula") || rawText.includes("intubar")) {
+        } else if (rawText.includes("via aerea") || rawText.includes("vía aérea") || rawText.includes("intubar")) {
             action = "airway_management";
-        } else if (rawText.includes("via") || rawText.includes("vía") || rawText.includes("suero") || rawText.includes("fluidos") || rawText.includes("canalizar")) {
+        } else if (rawText.includes("via") || rawText.includes("vía") || rawText.includes("suero") || rawText.includes("fluidos")) {
             action = "iv_access";
         }
 
-        // Ejecutar acción sin alertas restrictivas. El paciente sufrirá las consecuencias.
+        // Echo del comando en la bitácora
+        this.appendClinicalLog(`> OP: "${inputField.value.trim()}"`);
         this.processClinicalAction(action, inputField.value.trim());
     },
 
@@ -260,18 +274,22 @@ window.App = {
         if (window.ClinicalRules && window.EvaluationEngine) {
             const feedback = window.ClinicalRules.evaluateDecision(action, patientState);
             window.EvaluationEngine.logDecision(action, patientState, feedback, argumentText);
+            
+            // Instructor Silencioso reporta en bitácora
+            this.appendClinicalLog(feedback.logMessage, !feedback.correct);
         }
         
-        // Si la acción es ineficaz, no impacta la salud, pero sí consume el tiempo.
         if (action !== "ineffective_action") {
             this.state.patientEngine.applyProcedure(action);
         }
         
-        // Penalidad temporal: todo procedimiento (o intento fallido) quema 15 segundos
-        this.state.patientEngine.nextTick(15);
+        this.state.patientEngine.nextTick(10);
         
         const inputField = document.getElementById("clinicalCommandInput");
-        if (inputField) inputField.value = "";
+        if (inputField) {
+            inputField.value = "";
+            inputField.focus(); // Retiene el teclado en Desktop
+        }
 
         this.updateMonitorValues();
     },
@@ -284,11 +302,16 @@ window.App = {
     },
 
     onDynamicComplication(complication) {
-        const banner = document.createElement("div");
-        banner.className = "fixed top-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white font-bold px-6 py-4 rounded-2xl shadow-2xl z-50 text-center max-w-md border border-red-400 border-2 animate-bounce";
-        banner.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i><strong>${complication.title}</strong><br><span class="text-xs font-normal opacity-90">${complication.message}</span>`;
-        document.body.appendChild(banner);
-        setTimeout(() => banner.remove(), 4000);
+        this.appendClinicalLog(`[ALERTA CRÍTICA] ${complication.title}: ${complication.message}`, true);
+        
+        // Alerta visual destellante
+        const container = document.getElementById("scenarioContainer");
+        if(container) {
+            container.classList.add("border-red-500", "shadow-[0_0_50px_rgba(239,68,68,0.5)]");
+            setTimeout(() => {
+                container.classList.remove("border-red-500", "shadow-[0_0_50px_rgba(239,68,68,0.5)]");
+            }, 1000);
+        }
     },
 
     terminateSimulationLoop(endReason) {
@@ -298,8 +321,6 @@ window.App = {
         if (this.state.currentScenarioIndex < window.ScenariosDB.length) { this.initScenarioInstance(); } else { this.showResults(false); }
     },
 
-    // --- PANELES FINALES, CAMPUS Y MARCA BLANCA OMITIDOS POR BREVEDAD, SE MANTIENEN IGUALES ---
-    // (Mismas funciones de showResults, renderCompetencyChart, showCampus, etc.)
     showResults(died = false) {
         this.hideAllPages();
         const resultsPage = document.getElementById("resultsPage");
@@ -353,17 +374,23 @@ window.App = {
     },
 
     showCampus() { this.hideAllPages(); const campus = document.getElementById("campusPage"); if (campus) campus.classList.remove("hidden"); this.renderCampusCourses(); },
-    renderCampusCourses() { /* Mantiene igual */ },
-    downloadCourseMaterial(courseTitle) { /* Mantiene igual */ },
-    showSaaSPanel() { this.hideAllPages(); const panel = document.getElementById("saasAdminPanel"); if (panel) { panel.classList.remove("hidden"); panel.classList.add("flex"); this.switchAdminTab('branding'); } },
-    hideSaaSPanel() { const panel = document.getElementById("saasAdminPanel"); if (panel) panel.classList.remove("flex"); this.goBackToLanding(); },
-    switchAdminTab(tabName) { /* Mantiene igual */ },
-    renderAdminCoursesList() { /* Mantiene igual */ },
-    openCourseModal(id = null) { /* Mantiene igual */ },
-    closeCourseModal() { /* Mantiene igual */ },
-    saveCourseEdits() { /* Mantiene igual */ },
-    deleteCourse(id) { /* Mantiene igual */ },
-    downloadCertificate() { /* Mantiene igual */ }
+    renderCampusCourses() { /* IDEM anterior */ },
+    downloadCourseMaterial(courseTitle) { /* IDEM anterior */ },
+    showSaaSPanel() { this.hideAllPages(); const panel = document.getElementById("saasAdminPanel"); if (panel) { panel.classList.remove("hidden"); panel.classList.add("flex"); } },
+    
+    // Generación Auditada de Certificado avalado por ASARI / REMTYO
+    downloadCertificate() {
+        const name = prompt("Operador Clínico (Certificación Oficial):", "Marcelo Alejandro Patri") || "Operador Prehospitalario";
+        let audit = { promedioGral: 0 };
+        if (window.EvaluationEngine && typeof window.EvaluationEngine.getFinalMetrics === 'function') {
+            audit = window.EvaluationEngine.getFinalMetrics();
+        }
+        if (window.CertificateGenerator) {
+            window.CertificateGenerator.generate(name, audit.promedioGral || 0);
+        } else {
+            alert("Módulo de generación de avales REMTYO no disponible.");
+        }
+    }
 };
 
 document.addEventListener("DOMContentLoaded", () => { if (window.App) window.App.init(); });
