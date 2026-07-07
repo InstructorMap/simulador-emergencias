@@ -12,13 +12,20 @@ window.App = {
         currentScenarioIndex: 0,
         patientEngine: null,
         timelineEngine: null,
-        sessionLog: [] // La "Caja Negra" de la auditoría
+        sessionLog: []
     },
 
     init() {
         console.log("✅ ASARI Command Center: Sistemas Operativos.");
         this.loadCoursesData();
-        document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key === 'S') { e.preventDefault(); this.showSaaSPanel(); }});
+        
+        // Atajo Oculto para Administradores (Ctrl + Shift + S)
+        document.addEventListener('keydown', (e) => { 
+            if (e.ctrlKey && e.shiftKey && e.key === 'S') { 
+                e.preventDefault(); 
+                this.showSaaSPanel(); 
+            }
+        });
     },
 
     loadCoursesData() { try { const saved = localStorage.getItem("saas_courses_db"); if (saved) CoursesDB = JSON.parse(saved); } catch (err) {} },
@@ -27,26 +34,38 @@ window.App = {
     goBackToLanding() { if (this.state.timelineEngine) this.state.timelineEngine.stop(); this.hideAllPages(); const landing = document.getElementById("landingPage"); if (landing) landing.classList.remove("hidden"); },
 
     startSimulation() {
-        if (!window.ScenariosDB || window.ScenariosDB.length === 0) { alert("Sincronizando base de datos clínica..."); return; }
+        // Corrección: Búsqueda directa sin forzar el scope de 'window'
+        if (typeof ScenariosDB === "undefined" || ScenariosDB.length === 0) { 
+            alert("Sincronizando base de datos clínica. Aguarde un instante..."); 
+            return; 
+        }
+        
         this.state.currentScenarioIndex = 0;
         this.state.sessionLog = [];
-        if (window.EvaluationEngine) window.EvaluationEngine.reset();
+        
+        if (typeof EvaluationEngine !== "undefined" && typeof EvaluationEngine.reset === 'function') {
+            EvaluationEngine.reset();
+        }
+        
         this.hideAllPages();
         const simPage = document.getElementById("simulatorPage");
         if (simPage) simPage.classList.remove("hidden");
+        
         this.initScenarioInstance();
     },
 
     initScenarioInstance() {
-        const scenario = window.ScenariosDB[this.state.currentScenarioIndex];
+        const scenario = ScenariosDB[this.state.currentScenarioIndex];
         if (!scenario) return;
 
-        if (window.PatientEngine) this.state.patientEngine = new window.PatientEngine(scenario.patientTemplate || {});
+        if (typeof PatientEngine !== "undefined") {
+            this.state.patientEngine = new PatientEngine(scenario.patientTemplate || {});
+        }
         
         this.mountScenarioUI(scenario);
 
-        if (window.TimelineEngine) {
-            this.state.timelineEngine = new window.TimelineEngine(
+        if (typeof TimelineEngine !== "undefined") {
+            this.state.timelineEngine = new TimelineEngine(
                 (tick) => this.onPhysiologicTick(tick),
                 (complication) => this.onDynamicComplication(complication)
             );
@@ -54,7 +73,6 @@ window.App = {
         this.state.timelineEngine.start(scenario.timeLimit);
     },
 
-    // Inyección Estructural Única (Escudo contra refresco de DOM)
     mountScenarioUI(scenario) {
         const container = document.getElementById("scenarioContainer");
         if (!container) return;
@@ -184,25 +202,37 @@ window.App = {
     updateMonitorValues() {
         if (!this.state.patientEngine) return;
         const patient = this.state.patientEngine.getState();
-        const scenario = window.ScenariosDB[this.state.currentScenarioIndex];
+        
+        if (typeof ScenariosDB === "undefined") return;
+        const scenario = ScenariosDB[this.state.currentScenarioIndex];
 
-        // 1. Monitores de Texto
         const timerDisplay = document.getElementById("timerDisplay");
         if (timerDisplay) timerDisplay.innerText = scenario.timeLimit - patient.elapsedTime;
 
-        document.getElementById("display-fc").innerText = Math.round(patient.fc);
-        document.getElementById("display-fc-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.fc > 120 || patient.fc === 0 ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`;
+        const fcDisplay = document.getElementById("display-fc");
+        if (fcDisplay) {
+            fcDisplay.innerText = Math.round(patient.fc);
+            document.getElementById("display-fc-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.fc > 120 || patient.fc === 0 ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`;
+        }
 
-        document.getElementById("display-pa").innerText = `${Math.round(patient.paSistolica)}/${Math.round(patient.paDiastolica)}`;
-        document.getElementById("display-pa-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.paSistolica < 90 || patient.paSistolica === 0 ? 'text-red-500 font-bold' : 'text-emerald-400'}`;
+        const paDisplay = document.getElementById("display-pa");
+        if (paDisplay) {
+            paDisplay.innerText = `${Math.round(patient.paSistolica)}/${Math.round(patient.paDiastolica)}`;
+            document.getElementById("display-pa-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.paSistolica < 90 || patient.paSistolica === 0 ? 'text-red-500 font-bold' : 'text-emerald-400'}`;
+        }
 
-        document.getElementById("display-spo2").innerText = Math.round(patient.spo2);
-        document.getElementById("display-spo2-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.spo2 < 90 || patient.spo2 === 0 ? 'text-red-500' : 'text-emerald-400'}`;
+        const spo2Display = document.getElementById("display-spo2");
+        if (spo2Display) {
+            spo2Display.innerText = Math.round(patient.spo2);
+            document.getElementById("display-spo2-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.spo2 < 90 || patient.spo2 === 0 ? 'text-red-500' : 'text-emerald-400'}`;
+        }
 
-        document.getElementById("display-volumen").innerText = Math.round(patient.volSanguineo);
-        document.getElementById("display-volumen-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.volSanguineo < 80 ? 'text-red-500' : 'text-emerald-400'}`;
+        const volDisplay = document.getElementById("display-volumen");
+        if (volDisplay) {
+            volDisplay.innerText = Math.round(patient.volSanguineo);
+            document.getElementById("display-volumen-box").className = `text-4xl font-black mt-1 font-mono drop-shadow-[0_0_8px_rgba(52,211,153,0.3)] ${patient.volSanguineo < 80 ? 'text-red-500' : 'text-emerald-400'}`;
+        }
 
-        // 2. Anatomía Dinámica Vectorial
         const bloodPool = document.getElementById("visual-blood");
         const bodySVG = document.getElementById("svg-body");
         const eyesStatus = document.getElementById("visual-eyes");
@@ -210,19 +240,19 @@ window.App = {
         if (bloodPool) {
             if (patient.hemorragia === "Severa") {
                 const lostVol = 100 - patient.volSanguineo;
-                const size = Math.min(300, lostVol * 8); // El charco crece masivamente
+                const size = Math.min(300, lostVol * 8); 
                 bloodPool.style.width = `${size}px`;
                 bloodPool.style.height = `${size/3}px`;
                 bloodPool.style.opacity = "0.7";
             } else if (patient.hemorragia === "Controlada") {
-                bloodPool.style.opacity = "0.2"; // Queda evidencia oscura
+                bloodPool.style.opacity = "0.2"; 
             }
         }
 
         if (bodySVG) {
-            if (patient.spo2 < 85 || patient.paSistolica < 60) bodySVG.setAttribute("fill", "#0891b2"); // Cianosis oscura
-            else if (patient.paSistolica < 90) bodySVG.setAttribute("fill", "#94a3b8"); // Palidez shock
-            else bodySVG.setAttribute("fill", "#e2e8f0"); // Perfusión normal
+            if (patient.spo2 < 85 || patient.paSistolica < 60) bodySVG.setAttribute("fill", "#0891b2"); 
+            else if (patient.paSistolica < 90) bodySVG.setAttribute("fill", "#94a3b8"); 
+            else bodySVG.setAttribute("fill", "#e2e8f0"); 
         }
 
         if (eyesStatus) {
@@ -257,7 +287,6 @@ window.App = {
             action = "iv_access";
         }
 
-        // Echo del comando en la bitácora
         this.appendClinicalLog(`> OP: "${inputField.value.trim()}"`);
         this.processClinicalAction(action, inputField.value.trim());
     },
@@ -271,11 +300,9 @@ window.App = {
             return;
         }
 
-        if (window.ClinicalRules && window.EvaluationEngine) {
-            const feedback = window.ClinicalRules.evaluateDecision(action, patientState);
-            window.EvaluationEngine.logDecision(action, patientState, feedback, argumentText);
-            
-            // Instructor Silencioso reporta en bitácora
+        if (typeof ClinicalRules !== "undefined" && typeof EvaluationEngine !== "undefined") {
+            const feedback = ClinicalRules.evaluateDecision(action, patientState);
+            EvaluationEngine.logDecision(action, patientState, feedback, argumentText);
             this.appendClinicalLog(feedback.logMessage, !feedback.correct);
         }
         
@@ -288,7 +315,7 @@ window.App = {
         const inputField = document.getElementById("clinicalCommandInput");
         if (inputField) {
             inputField.value = "";
-            inputField.focus(); // Retiene el teclado en Desktop
+            inputField.focus(); 
         }
 
         this.updateMonitorValues();
@@ -304,7 +331,6 @@ window.App = {
     onDynamicComplication(complication) {
         this.appendClinicalLog(`[ALERTA CRÍTICA] ${complication.title}: ${complication.message}`, true);
         
-        // Alerta visual destellante
         const container = document.getElementById("scenarioContainer");
         if(container) {
             container.classList.add("border-red-500", "shadow-[0_0_50px_rgba(239,68,68,0.5)]");
@@ -317,8 +343,13 @@ window.App = {
     terminateSimulationLoop(endReason) {
         if (this.state.timelineEngine) this.state.timelineEngine.stop();
         if (endReason === "patient_died") { this.showResults(true); return; }
+        
         this.state.currentScenarioIndex++;
-        if (this.state.currentScenarioIndex < window.ScenariosDB.length) { this.initScenarioInstance(); } else { this.showResults(false); }
+        if (typeof ScenariosDB !== "undefined" && this.state.currentScenarioIndex < ScenariosDB.length) { 
+            this.initScenarioInstance(); 
+        } else { 
+            this.showResults(false); 
+        }
     },
 
     showResults(died = false) {
@@ -327,7 +358,7 @@ window.App = {
         if (resultsPage) resultsPage.classList.remove("hidden");
         
         let audit = { promedioGral: 0, competencias: { MARCH_M: 0, MARCH_A: 0, General: 0 } };
-        if (window.EvaluationEngine && typeof window.EvaluationEngine.getFinalMetrics === 'function') audit = window.EvaluationEngine.getFinalMetrics();
+        if (typeof EvaluationEngine !== "undefined" && typeof EvaluationEngine.getFinalMetrics === 'function') audit = EvaluationEngine.getFinalMetrics();
 
         const scoreDisplay = document.getElementById("resultScore");
         const levelDisplay = document.getElementById("resultLevel");
@@ -374,21 +405,27 @@ window.App = {
     },
 
     showCampus() { this.hideAllPages(); const campus = document.getElementById("campusPage"); if (campus) campus.classList.remove("hidden"); this.renderCampusCourses(); },
-    renderCampusCourses() { /* IDEM anterior */ },
-    downloadCourseMaterial(courseTitle) { /* IDEM anterior */ },
-    showSaaSPanel() { this.hideAllPages(); const panel = document.getElementById("saasAdminPanel"); if (panel) { panel.classList.remove("hidden"); panel.classList.add("flex"); } },
+    renderCampusCourses() { /* Lógica del campus omitida para brevedad */ },
     
-    // Generación Auditada de Certificado avalado por ASARI / REMTYO
+    showSaaSPanel() { 
+        this.hideAllPages(); 
+        const panel = document.getElementById("saasAdminPanel"); 
+        if (panel) { 
+            panel.classList.remove("hidden"); 
+            panel.classList.add("flex"); 
+        } 
+    },
+    
     downloadCertificate() {
-        const name = prompt("Operador Clínico (Certificación Oficial):", "Marcelo Alejandro Patri") || "Operador Prehospitalario";
+        const name = prompt("Operador Clínico (Certificación Oficial):") || "Operador Prehospitalario";
         let audit = { promedioGral: 0 };
-        if (window.EvaluationEngine && typeof window.EvaluationEngine.getFinalMetrics === 'function') {
-            audit = window.EvaluationEngine.getFinalMetrics();
+        if (typeof EvaluationEngine !== "undefined" && typeof EvaluationEngine.getFinalMetrics === 'function') {
+            audit = EvaluationEngine.getFinalMetrics();
         }
-        if (window.CertificateGenerator) {
-            window.CertificateGenerator.generate(name, audit.promedioGral || 0);
+        if (typeof CertificateGenerator !== "undefined") {
+            CertificateGenerator.generate(name, audit.promedioGral || 0);
         } else {
-            alert("Módulo de generación de avales REMTYO no disponible.");
+            alert("Módulo de generación no disponible.");
         }
     }
 };
